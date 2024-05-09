@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
 #$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024
-# -o /net/dunham/vol2/Leah/240117_FTevo/outputs/
-# -e /net/dunham/vol2/Leah/240117_FTevo/errors/
+# -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
+# -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
 # -l mfree=8G
 # -l h_rt=36:0:0
 
