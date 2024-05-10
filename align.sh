@@ -1,13 +1,13 @@
 #!/bin/bash
 #$ -S /bin/bash
 #$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024
-# -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
-# -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
-# -l mfree=8G
-# -l h_rt=36:0:0
+#$ -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
+#$ -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
+#$ -l mfree=8G
+#$ -l h_rt=36:0:0
 
-set -e
-set -u
+#set -e
+#set -u
 
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
