@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024
-#$ -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
-#$ -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
+#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
+#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
+#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
@@ -21,22 +21,22 @@ module load htslib/1.18
 module load samtools/1.14
 module load picard/3.1.1
 module load GATK/3.7
-module load python/3.12.1 numpy biopython
+module load python/3.12.1 numpy biopython lofreq/2.1.5-18
 module load perl/5.26.3
 module load VCFtools/0.1.16-20
 module load bcftools/1.19
 module load bedtools/2.25.0
 module load freebayes/1.3.6
-#module load lofreq/2.1.5
+
 
 FOLDER=$1
 SAMPLE=$2 # Passed sample prefix (ex: Sample-01)
 ANC=$3
-DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024
+DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SEQID=leah_freeze_evolution # Project name and date for bam header
-REF=/net/dunham/vol2/Leah/240117_FTevo/genomes/sacCer3.fasta # Reference genome
+REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=/net/dunham/vol2/Cris_L/ReferenceGenome/S288C_reference_genome_R64-1-1_20110203 # Location of custom annotation scripts
 SCRIPTS=/net/dunham/vol2/Cris_L/Aaron_Reanalyze/Scripts # Location of custom scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
@@ -90,6 +90,9 @@ java -Xmx2g -jar $PICARD_DIR/picard.jar AddOrReplaceReadGroups \
         RGPL=illumina \
         RGSM=${SAMPLE} \
         VALIDATION_STRINGENCY=LENIENT
+
+module unload picard/3.1.1
+module load java/1.8.0
 
 (>&2 echo ***Samtools - Sort and Index***)
 samtools sort ${SAMPLE}_comb_R1R2.RG.MD.bam \
@@ -222,3 +225,6 @@ rm ${SAMPLE}_R1R2.RG.MD.realign.bam
 rm ${SAMPLE}_R1R2.RG.MD.realign.bai
 rm ${SAMPLE}_R1R2_sort.bam
 rm ${SAMPLE}_R1R2_sort.bam.bai
+rm ${SAMPLE}_R1R2.RG.MD.sort.bam
+rm ${SAMPLE}_R1R2.RG.MD.sort.bam.bai
+rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
