@@ -128,12 +128,6 @@ freebayes -f ${REF} \
         --pooled-discrete --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
         ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
-######
-#
-# If ancestor, comment out below section
-#
-######
-
 (>&2 echo ***LoFreq - Somatic***)
 lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
        -o ${SAMPLE}_lofreq_
@@ -218,13 +212,12 @@ python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
 awk '$8 = $8 FS "NA NA"' ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf.annotated > ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.twoCol.vcf.annotated
 
 # Remove intermediates
-rm ${SAMPLE}_R1R2.bam.intervals
-rm ${SAMPLE}_R1R2.MD.bam
-rm ${SAMPLE}_R1R2.RG.MD.bam
-rm ${SAMPLE}_R1R2.RG.MD.realign.bam
-rm ${SAMPLE}_R1R2.RG.MD.realign.bai
-rm ${SAMPLE}_R1R2_sort.bam
-rm ${SAMPLE}_R1R2_sort.bam.bai
+rm ${SAMPLE}_comb_R1R2.bam.intervals
+rm ${SAMPLE}_comb_R1R2.MD.bam
+rm ${SAMPLE}_comb_R1R2.RG.MD.bam
+rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bam
+rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bai
+rm ${SAMPLE}_comb_R1R2_sort.bam
+rm ${SAMPLE}_comb_R1R2_sort.bam.bai
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam.bai
-rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
