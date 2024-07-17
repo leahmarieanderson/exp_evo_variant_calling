@@ -1,13 +1,11 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
-#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
-#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
+#$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024/
+#$ -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
+#$ -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
-
-#set -e
-#set -u
+#$ -N leah_tempfix_test
 
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
@@ -28,13 +26,12 @@ module load bcftools/1.19
 module load bedtools/2.25.0
 module load freebayes/1.3.6
 
-
 FOLDER=$1
 ANC=$2
-DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
+DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
-SEQID=leah_freeze_evolution # Project name and date for bam header
+SEQID=leah_tempfix_test # Project name and date for bam header
 REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
 
 # Sets up folder structure

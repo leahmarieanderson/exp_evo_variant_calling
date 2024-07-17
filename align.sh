@@ -1,10 +1,11 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
-#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
-#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
+#$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024/
+#$ -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
+#$ -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
+#$ -N leah_tempfix_test
 
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
@@ -25,17 +26,14 @@ module load bcftools/1.19
 module load bedtools/2.25.0
 module load freebayes/1.3.6
 
-
 FOLDER=$1
 SAMPLE=$2 # Passed sample prefix (ex: Sample-01)
 ANC=$3
-DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
+DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
-SEQID=leah_freeze_evolution # Project name and date for bam header
+SEQID=leah_tempfix_test # Project name and date for bam header
 REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
-ANNOTATE=/net/dunham/vol2/Cris_L/ReferenceGenome/S288C_reference_genome_R64-1-1_20110203 # Location of custom annotation scripts
-SCRIPTS=/net/dunham/vol2/Cris_L/Aaron_Reanalyze/Scripts # Location of custom scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
 VCFDIR=${WORKDIR}/${ANC}/
 
@@ -122,7 +120,7 @@ bcftools mpileup --ignore-RG -Ou -ABf ${REF} ${SAMPLE}_comb_R1R2.RG.MD.realign.s
 
 # Freebayes with a lot of arguments for population calling
 freebayes -f ${REF} \
-        --pooled-discrete --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
+        --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
         ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
 # Filters samtools by ancestor
@@ -146,7 +144,7 @@ bedtools intersect -v -header \
 # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
 (>2 echo ***BCFtools - Filter***)
 bcftools filter -O v -o ${SAMPLE}_samtools_AB_AncFiltered.filt.vcf \
-        -i 'MQ>30 & QUAL>75 & DP>40 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
+        -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
         ${SAMPLE}_samtools_AB_AncFiltered.vcf
 
 #Chris recommended a 40x coverage cutoff, but some of my samples are low coverage so I switched it to 10 for now.
