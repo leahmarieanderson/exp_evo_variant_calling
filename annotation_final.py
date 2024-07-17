@@ -60,8 +60,8 @@ def main(vcf, orfs, noncoding_file, genome_file):
 			key_int = key_int + 1
 			noncoding[key_int] = [ l[8].split(';')[0].split('=')[1], chromosome_conversion(l[0][3:]), l[2], int(l[3]), int(l[4]) ]
 		
- 	"""ANNOTATE SNPS"""
-	
+	"""ANNOTATE SNPS"""
+
 	#open output file
 	f_out = open(vcf[0:-21]+"annotated_vcf.txt", 'w')
 
