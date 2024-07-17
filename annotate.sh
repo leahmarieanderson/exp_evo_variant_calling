@@ -26,16 +26,13 @@ module load bedtools/2.25.0
 module load freebayes/1.3.6
 
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
-#ANC=$2
 DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/fastq # Location of Fastqs
 SEQID=leah_FTevo # Project name and date for bam header
 REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=/net/dunham/vol2/Cris_L/ReferenceGenome/S288C_reference_genome_R64-1-1_20110203 # Location of custom annotation scripts
-SCRIPTS=/net/dunham/vol2/Cris_L/Aaron_Reanalyze/Scripts # Location of custom scripts
-#ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
-#VCFDIR=${WORKDIR}/${ANC}/
+SCRIPTS=/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling # Location of custom scripts
 
 cd ${WORKDIR}/${SAMPLE}/
 
@@ -52,7 +49,7 @@ bcftools filter -O v -o ${SAMPLE}_samtools_filtered.vcf \
 
 # Make sure you have a folder in your ${DIR} location called exp_evo_variant_calling and the annotation_final.py
 # script is inside that folder for this to work. 
-python3 ${DIR}/exp_evo_variant_calling/annotation_final.py \
+python3 ${SCRIPTS}/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_filtered.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \

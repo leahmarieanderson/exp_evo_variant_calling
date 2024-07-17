@@ -38,7 +38,7 @@ SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SEQID=leah_freeze_evolution # Project name and date for bam header
 REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=/net/dunham/vol2/Cris_L/ReferenceGenome/S288C_reference_genome_R64-1-1_20110203 # Location of custom annotation scripts
-SCRIPTS=/net/dunham/vol2/Cris_L/Aaron_Reanalyze/Scripts # Location of custom scripts
+SCRIPTS=/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling/ # Location of custom scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
 VCFDIR=${WORKDIR}/${ANC}/
 
@@ -190,19 +190,19 @@ bedtools intersect -v -header \
 
 # Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
 (>2 echo ***Annotate***)
-python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
+python ${SCRIPTS}/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.filt.noOverlap.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
-python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
+python ${SCRIPTS}/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
-python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
+python ${SCRIPTS}/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
