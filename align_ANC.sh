@@ -21,7 +21,7 @@ module load htslib/1.18
 module load samtools/1.14
 module load picard/3.1.1
 module load GATK/3.7
-module load python/3.12.1 numpy biopython lofreq/2.1.5-18
+module load python/3.12.1 numpy biopython
 module load perl/5.26.3
 module load VCFtools/0.1.16-20
 module load bcftools/1.19
