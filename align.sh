@@ -221,3 +221,28 @@ rm ${SAMPLE}_comb_R1R2_sort.bam
 rm ${SAMPLE}_comb_R1R2_sort.bam.bai
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam.bai
+
+# remove all the lofreq intermediate files
+rm ${SAMPLE}_lofreq_normal_relaxed.log
+rm ${SAMPLE}_lofreq_normal_relaxed.vcf
+rm ${SAMPLE}_lofreq_normal_relaxed.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz
+rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz
+rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz
+rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf
+rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz
+rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz
+rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf.annotated
+rm ${SAMPLE}_lofreq_tumor_relaxed.log
+rm ${SAMPLE}_lofreq_tumor_relaxed.vcf
+rm ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz
+rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz.tbi
+rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz
+rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz.tbi
