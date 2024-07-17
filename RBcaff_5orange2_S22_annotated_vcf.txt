@@ -1,0 +1,71 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##bcftoolsVersion=1.9+htslib-1.9
+##bcftoolsCommand=mpileup --ignore-RG -Ou -ABf /net/dunham/vol2/Renee/yEvo_seq/genomes/sacCer3.fasta RBcaff_5orange2_S22_comb_R1R2.RG.MD.realign.sort.bam
+##reference=file:///net/dunham/vol2/Renee/yEvo_seq/genomes/sacCer3.fasta
+##contig=<ID=chrI,length=230218>
+##contig=<ID=chrII,length=813184>
+##contig=<ID=chrIII,length=316620>
+##contig=<ID=chrIV,length=1531933>
+##contig=<ID=chrIX,length=439888>
+##contig=<ID=chrM,length=85779>
+##contig=<ID=chrV,length=576874>
+##contig=<ID=chrVI,length=270161>
+##contig=<ID=chrVII,length=1090940>
+##contig=<ID=chrVIII,length=562643>
+##contig=<ID=chrX,length=745751>
+##contig=<ID=chrXI,length=666816>
+##contig=<ID=chrXII,length=1078177>
+##contig=<ID=chrXIII,length=924431>
+##contig=<ID=chrXIV,length=784333>
+##contig=<ID=chrXV,length=1091291>
+##contig=<ID=chrXVI,length=948066>
+##ALT=<ID=*,Description="Represents allele(s) other than observed.">
+##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+##INFO=<ID=IDV,Number=1,Type=Integer,Description="Maximum number of reads supporting an indel">
+##INFO=<ID=IMF,Number=1,Type=Float,Description="Maximum fraction of reads supporting an indel">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw read depth">
+##INFO=<ID=VDB,Number=1,Type=Float,Description="Variant Distance Bias for filtering splice-site artefacts in RNA-seq data (bigger is better)",Version="3">
+##INFO=<ID=RPB,Number=1,Type=Float,Description="Mann-Whitney U test of Read Position Bias (bigger is better)">
+##INFO=<ID=MQB,Number=1,Type=Float,Description="Mann-Whitney U test of Mapping Quality Bias (bigger is better)">
+##INFO=<ID=BQB,Number=1,Type=Float,Description="Mann-Whitney U test of Base Quality Bias (bigger is better)">
+##INFO=<ID=MQSB,Number=1,Type=Float,Description="Mann-Whitney U test of Mapping Quality vs Strand Bias (bigger is better)">
+##INFO=<ID=SGB,Number=1,Type=Float,Description="Segregation based metric.">
+##INFO=<ID=MQ0F,Number=1,Type=Float,Description="Fraction of MQ0 reads (smaller is better)">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="List of Phred-scaled genotype likelihoods">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##INFO=<ID=ICB,Number=1,Type=Float,Description="Inbreeding Coefficient Binomial test (bigger is better)">
+##INFO=<ID=HOB,Number=1,Type=Float,Description="Bias in the number of HOMs number (smaller is better)">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes for each ALT allele, in the same order as listed">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
+##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
+##bcftools_callVersion=1.9+htslib-1.9
+##bcftools_callCommand=call -vmO v -o RBcaff_5orange2_S22_samtools_AB.vcf; Date=Thu Jun  2 16:11:26 2022
+##bcftools_filterVersion=1.9+htslib-1.9
+##bcftools_filterCommand=filter -O v -o RBcaff_5orange2_S22_samtools_filtered.vcf -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' RBcaff_5orange2_S22_samtools_AB_AncFiltered.vcf; Date=Fri Jun  3 10:15:29 2022
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	RBcaff_5orange2_S22_comb_R1R2.RG.MD.realign.sort.bam	ANNOTATION	REGION	PROTEIN
+chrII	254815	.	C	T	222	PASS	DP=125;VDB=3.24845e-05;SGB=-0.693146;RPB=1.49638e-06;MQB=1;MQSB=1;BQB=0.0221585;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=32,12,26,16;MQ=60	GT:PL	0/1:255,0,255	ARS	ARS209	NA
+chrII	254834	.	A	G	222	PASS	DP=126;VDB=1.46171e-06;SGB=-0.693145;RPB=5.30069e-05;MQB=1;MQSB=1;BQB=0.137382;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=31,8,28,13;MQ=60	GT:PL	0/1:255,0,255	ARS	ARS209	NA
+chrII	254899	.	T	A	222	PASS	DP=143;VDB=0.252946;SGB=-0.693147;RPB=0.998927;MQB=1;MQSB=1;BQB=0.735822;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=27,4,46,7;MQ=60	GT:PL	0/1:255,0,255	ARS	ARS209	NA
+chrII	254913	.	A	G	222	PASS	DP=139;VDB=0.318879;SGB=-0.693147;RPB=0.710813;MQB=1;MQSB=1;BQB=0.96074;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=22,9,47,7;MQ=60	GT:PL	0/1:255,0,255	ARS	ARS209	NA
+chrII	255127	.	A	G	222	PASS	DP=111;VDB=0.000197406;SGB=-0.693146;RPB=0.87419;MQB=0.986729;MQSB=0.988173;BQB=0.184837;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=20,9,26,18;MQ=59	GT:PL	0/1:255,0,255	ARS	ARS209	NA
+chrII	255152	.	A	G	222	PASS	DP=114;VDB=2.52975e-13;SGB=-0.693144;RPB=0.00238386;MQB=0.982211;MQSB=0.990446;BQB=0.951906;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=25,10,25,14;MQ=59	GT:PL	0/1:255,0,255	ARS	ARS209	NA
+chrIV	370155	.	G	A	225	PASS	DP=67;VDB=0.13367;SGB=-0.693146;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,30,14;MQ=60	GT:PL	1/1:255,132,0	coding-nonsynonymous	YDL047W	E129.0K
+chrIX	397990	.	C	T	222	PASS	DP=73;VDB=0.998289;SGB=-0.692831;RPB=0.908967;MQB=1;MQSB=1;BQB=0.990804;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=15,11,14,10;MQ=60	GT:PL	0/1:255,0,255	5'-upstream	YIR020C-B	NA
+chrIX	397990	.	C	T	222	PASS	DP=73;VDB=0.998289;SGB=-0.692831;RPB=0.908967;MQB=1;MQSB=1;BQB=0.990804;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=15,11,14,10;MQ=60	GT:PL	0/1:255,0,255	coding-nonsynonymous	YIR021W	R233.0C
+chrV	115961	.	T	A	228	PASS	DP=57;VDB=3.78425e-11;SGB=-0.693145;RPB=1;MQB=1;MQSB=0.85;BQB=1;MQ0F=0;AC=2;AN=2;DP4=0,1,40,1;MQ=57	GT:PL	1/1:255,109,0	intergenic	NA	NA
+chrV	115972	.	T	A	220	PASS	DP=70;VDB=1.34475e-11;SGB=-0.693136;RPB=0.397902;MQB=0.956999;MQSB=0.969021;BQB=0.995626;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=5,3,34,1;MQ=58	GT:PL	0/1:255,0,128	5'-upstream	YEL021W	NA
+chrV	115973	.	G	A	225	PASS	DP=17;VDB=1.51027e-06;SGB=-0.688148;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,3,12;MQ=60	GT:PL	1/1:255,45,0	5'-upstream	YEL021W	NA
+chrV	115989	.	C	T	225	PASS	DP=77;VDB=1.6078e-11;SGB=-0.693147;MQSB=0.994011;MQ0F=0;AC=2;AN=2;DP4=0,0,38,7;MQ=59	GT:PL	1/1:255,135,0	5'-upstream	YEL021W	NA
+chrV	115997	.	T	C	225	PASS	DP=78;VDB=2.18708e-09;SGB=-0.693146;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,35,9;MQ=60	GT:PL	1/1:255,132,0	5'-upstream	YEL021W	NA
+chrV	116028	.	G	A	225	PASS	DP=75;VDB=2.28192e-08;SGB=-0.693147;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,35,11;MQ=60	GT:PL	1/1:255,129,0	5'-upstream	YEL021W	NA
+chrV	116086	.	G	A	225	PASS	DP=68;VDB=1;SGB=-0.693147;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,34,18;MQ=60	GT:PL	1/1:255,157,0	5'-upstream	YEL021W	NA
+chrV	116577	.	G	A	225	PASS	DP=62;VDB=0.000688094;SGB=-0.693144;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,33,6;MQ=60	GT:PL	1/1:255,117,0	coding-synonymous	YEL021W	A137.0A
+chrV	116644	.	G	T	225	PASS	DP=70;VDB=0.999999;SGB=-0.693147;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,34,16;MQ=60	GT:PL	1/1:255,151,0	coding-nonsynonymous	YEL021W	A160.0S
+chrV	116799	.	C	T	225	PASS	DP=76;VDB=0.959178;SGB=-0.693147;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,29,25;MQ=60	GT:PL	1/1:255,163,0	coding-synonymous	YEL021W	D211.0D
+chrV	116838	.	C	G	225	PASS	DP=72;VDB=0.839147;SGB=-0.693147;MQSB=1;MQ0F=0;AC=2;AN=2;DP4=0,0,41,13;MQ=59	GT:PL	1/1:255,160,0	coding-synonymous	YEL021W	V224.0V
+chrVII	471377	.	T	G	228	PASS	DP=55;VDB=0.997502;SGB=-0.693145;RPB=1;MQB=1;MQSB=1;BQB=1;MQ0F=0;AC=2;AN=2;DP4=1,0,30,10;MQ=60	GT:PL	1/1:255,87,0	coding-nonsynonymous	YGL013C	M308.0L
+chrVIII	526453	.	T	C	141	PASS	DP=111;VDB=6.56212e-15;SGB=-0.693141;RPB=1.39423e-09;MQB=0.000115112;MQSB=0.201451;BQB=0.873218;MQ0F=0.036036;ICB=1;HOB=0.5;AC=1;AN=2;DP4=27,15,23,14;MQ=34	GT:PL	0/1:175,0,255	coding-synonymous	YHR211W	V354.0V
+chrXV	296964	.	A	G	228	PASS	DP=83;VDB=0.277529;SGB=-0.693147;RPB=1;MQB=1;MQSB=1;BQB=1;MQ0F=0;AC=2;AN=2;DP4=1,0,38,10;MQ=60	GT:PL	1/1:255,88,0	5'-upstream	YOL015W	NA
+chrXV	622276	.	G	T	222	PASS	DP=53;VDB=0.929889;SGB=-0.693079;RPB=0.630596;MQB=1;MQSB=1;BQB=0.946393;MQ0F=0;ICB=1;HOB=0.5;AC=1;AN=2;DP4=4,12,8,21;MQ=60	GT:PL	0/1:255,0,255	coding-nonsynonymous	YOR153W	V813.0F

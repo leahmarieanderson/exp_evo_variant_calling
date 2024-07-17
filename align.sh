@@ -6,9 +6,6 @@
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
-#set -e
-#set -u
-
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
 ## Uses the recommended SNP calling pipeline from Samtools
@@ -128,15 +125,6 @@ freebayes -f ${REF} \
         --pooled-discrete --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
         ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
-(>&2 echo ***LoFreq - Somatic***)
-lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
-       -o ${SAMPLE}_lofreq_
-
-# Unzips lofreq vcfs
-bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
-bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
-bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
-#
 # Filters samtools by ancestor
 (>2 echo ***Bedtools - Intersect***)
 bedtools intersect -v -header \
@@ -149,12 +137,6 @@ bedtools intersect -v -header \
         -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
         -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
         > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
-
-# Filters lofreq by ancestor
-bedtools intersect -v -header \
-        -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
-        -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
-        > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.vcf
 
 # Many filtering steps
 # MQ or MQM = Mapping quality
@@ -169,47 +151,15 @@ bcftools filter -O v -o ${SAMPLE}_samtools_AB_AncFiltered.filt.vcf \
 
 #Chris recommended a 40x coverage cutoff, but some of my samples are low coverage so I switched it to 10 for now.
 bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
-        -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
+        -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>40 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
         ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
-bcftools filter -O v -o ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
-       -i 'QUAL>20 & DP>20 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
-       ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.vcf
-
 # Fitler samtools by freebayes and lofreq
-bedtools intersect -v -header \
+bedtools intersect -header \
         -a ${SAMPLE}_samtools_AB_AncFiltered.filt.vcf \
         -b ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
         > ${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf
 
-# Filter freebayes by lofreq
-bedtools intersect -v -header \
-        -a ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
-        -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.vcf \
-        > ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.noOverlap.vcf
-
-# Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
-(>2 echo ***Annotate***)
-python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
-        -f {WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.filt.noOverlap.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
-        -f {WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
-        -f {WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-# Makes sure lofreq has the same nunmber of columns as the other vcfs
-awk '$8 = $8 FS "NA NA"' ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf.annotated > ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.twoCol.vcf.annotated
 
 # Remove intermediates
 rm ${SAMPLE}_comb_R1R2.bam.intervals
