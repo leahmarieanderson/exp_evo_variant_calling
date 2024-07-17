@@ -21,7 +21,7 @@ module load htslib/1.18
 module load samtools/1.14
 module load picard/3.1.1
 module load GATK/3.7
-module load python/3.12.1 numpy biopython lofreq/2.1.5-18
+module load python/3.12.1 numpy biopython
 module load perl/5.26.3
 module load VCFtools/0.1.16-20
 module load bcftools/1.19
@@ -128,15 +128,6 @@ freebayes -f ${REF} \
         --pooled-discrete --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
         ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
-(>&2 echo ***LoFreq - Somatic***)
-lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
-       -o ${SAMPLE}_lofreq_
-
-# Unzips lofreq vcfs
-bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
-bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
-bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
-#
 # Filters samtools by ancestor
 (>2 echo ***Bedtools - Intersect***)
 bedtools intersect -v -header \
@@ -150,12 +141,6 @@ bedtools intersect -v -header \
         -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
         > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
-# Filters lofreq by ancestor
-bedtools intersect -v -header \
-        -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
-        -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
-        > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.vcf
-
 # Many filtering steps
 # MQ or MQM = Mapping quality
 # QUAL = Metric that is specific for the variant caller that denotes confidence
@@ -163,53 +148,28 @@ bedtools intersect -v -header \
 # DP[x] or SAF,SAR,SRF,SRR = Array with read depth for Fwd, Rev, and from which strand
 # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
 (>2 echo ***BCFtools - Filter***)
-bcftools filter -O v -o ${SAMPLE}_samtools_AB_AncFiltered.filt.vcf \
-        -i 'MQ>30 & QUAL>75 & DP>40 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
+bcftools filter -O v -o ${SAMPLE}_samtools_filtered.vcf \
+        -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
         ${SAMPLE}_samtools_AB_AncFiltered.vcf
 
 #Chris recommended a 40x coverage cutoff, but some of my samples are low coverage so I switched it to 10 for now.
 bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
-        -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
+        -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>40 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
         ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
-bcftools filter -O v -o ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
-       -i 'QUAL>20 & DP>20 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
-       ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.vcf
-
-# Fitler samtools by freebayes and lofreq
-bedtools intersect -v -header \
-        -a ${SAMPLE}_samtools_AB_AncFiltered.filt.vcf \
-        -b ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
-        > ${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf
-
-# Filter freebayes by lofreq
-bedtools intersect -v -header \
-        -a ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
-        -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.vcf \
-        > ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.noOverlap.vcf
+# intersect samtools by freebayes
+bedtools intersect -header \
+        -a ${SAMPLE}_samtools_filtered.vcf \
+        -b ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
+        > ${SAMPLE}_samtools_AB_AncFiltered.filt.Overlap.vcf
 
 # Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
 (>2 echo ***Annotate***)
-python ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.filt.noOverlap.vcf \
+python3 ${SCRIPTS}/annotation_final.py \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_filtered.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-python ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-python ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-# Makes sure lofreq has the same nunmber of columns as the other vcfs
-awk '$8 = $8 FS "NA NA"' ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf.annotated > ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.twoCol.vcf.annotated
 
 # Remove intermediates
 rm ${SAMPLE}_comb_R1R2.bam.intervals
@@ -222,27 +182,7 @@ rm ${SAMPLE}_comb_R1R2_sort.bam.bai
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam.bai
 
-# remove all the lofreq intermediate files
-rm ${SAMPLE}_lofreq_normal_relaxed.log
-rm ${SAMPLE}_lofreq_normal_relaxed.vcf
-rm ${SAMPLE}_lofreq_normal_relaxed.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz
-rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz
-rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz
-rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf
-rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz
-rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz
-rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf.annotated
-rm ${SAMPLE}_lofreq_tumor_relaxed.log
-rm ${SAMPLE}_lofreq_tumor_relaxed.vcf
-rm ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz
-rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz
-rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz.tbi
+# remove intermediate samtools and freebayes files
+rm ${SAMPLE}_samtools_AB_AncFiltered.vcf
+rm ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
+
