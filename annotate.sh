@@ -50,16 +50,9 @@ bcftools filter -O v -o ${SAMPLE}_samtools_filtered.vcf \
         -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
         ${SAMPLE}_samtools_AB_AncFiltered.vcf
 
-#module load numpy/1.7.0
-#module load biopython/latest
-#python ${DIR}/scripts/yeast_annotation_anna_edits.py 
-#       -f ${SNPDIR}/${SAMPLE}_samtools_filtered.vcf 
-#       -s ${DIR}/genomes/orf_coding_all_R64-1-1_20110203.fasta 
-#       -n ${DIR}/genomes/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered 
-#       -g ${DIR}/genomes/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-
-python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
+# Make sure you have a folder in your ${DIR} location called exp_evo_variant_calling and the annotation_final.py
+# script is inside that folder for this to work. 
+python3 ${DIR}/exp_evo_variant_calling/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_filtered.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \

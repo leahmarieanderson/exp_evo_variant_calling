@@ -48,7 +48,7 @@ def main(vcf, orfs, noncoding_file, genome_file):
 	#populate list of chromosomes in genome. genome fasta should have an identifier format of ">chrI" ">chrII" ">chrIII" etc
 	genome = {}
 	for record in SeqIO.parse(open(genome_file, 'r'), 'fasta'):
-		genome[chromosome_conversion(record.description[:])] = str(record.seq)
+		genome[chromosome_conversion(record.description.split(' [')[4].split('=')[1][0:-1])] = str(record.seq)
 	
 	#populate second dictionary of non-coding annotations
 	#noncoding[ID] = [ ID, chrom, regiontype, start, stop ]

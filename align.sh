@@ -191,19 +191,19 @@ bedtools intersect -v -header \
 # Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
 (>2 echo ***Annotate***)
 python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
-        -f {WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.filt.noOverlap.vcf \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.filt.noOverlap.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
 python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
-        -f {WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
 python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
-        -f {WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
