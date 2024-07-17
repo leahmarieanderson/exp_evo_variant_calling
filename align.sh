@@ -158,7 +158,13 @@ bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
 bedtools intersect -header \
         -a ${SAMPLE}_samtools_AB_AncFiltered.filt.vcf \
         -b ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed_AncFiltered.filt.vcf \
-        > ${SAMPLE}_samtools_AB_AncFiltered.filt.noOverlap.vcf
+        > ${SAMPLE}_final.vcf
+
+python3 $/net/gs/vol1/home/leaha3/annotation_final.py \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_filtered.vcf \
+        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
 
 # Remove intermediates
