@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/240117_FTevo
-#$ -o /net/dunham/vol2/Leah/240117_FTevo/outputs
-#$ -e /net/dunham/vol2/Leah/240117_FTevo/errors
+#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
+#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
+#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
@@ -12,28 +12,26 @@
 ## Then filters based on the ancestral sequence
 
 module load modules modules-init modules-gs
-module load zlib/1.2.11
+module load zlib/1.2.13_compat
 module load bwa/0.7.15
-module load htslib/1.9
-module load samtools/1.9
-module load picard/2.23.3
+module load htslib/1.18
+module load samtools/1.14
+module load picard/3.1.1
 module load GATK/3.7
-module load python/2.7.13 numpy/1.16.6 biopython/1.71
-module load perl/5.32.0
-module load VCFtools/0.1.14
-module load htslib/1.10.2
-module load bcftools/1.9
-module load bedtools/2.27.1
-module load freebayes/1.0.2-6-g3ce827d
-module load lofreq/2.1.5
+module load python/3.12.1 numpy biopython lofreq/2.1.5-18
+module load perl/5.26.3
+module load VCFtools/0.1.16-20
+module load bcftools/1.19
+module load bedtools/2.25.0
+module load freebayes/1.3.6
 
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 #ANC=$2
-DIR=/net/dunham/vol2/Leah/240117_FTevo
+DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/fastq # Location of Fastqs
 SEQID=leah_FTevo # Project name and date for bam header
-REF=/net/dunham/vol2/Leah/240117_FTevo/genomes/sacCer3.fasta # Reference genome
+REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=/net/dunham/vol2/Cris_L/ReferenceGenome/S288C_reference_genome_R64-1-1_20110203 # Location of custom annotation scripts
 SCRIPTS=/net/dunham/vol2/Cris_L/Aaron_Reanalyze/Scripts # Location of custom scripts
 #ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
@@ -54,7 +52,11 @@ bcftools filter -O v -o ${SAMPLE}_samtools_filtered.vcf \
 
 #module load numpy/1.7.0
 #module load biopython/latest
-#python ${DIR}/scripts/yeast_annotation_anna_edits.py -f ${SNPDIR}/${SAMPLE}_samtools_filtered.vcf -s ${DIR}/genomes/orf_coding_all_R64-1-1_20110203.fasta -n ${DIR}/genomes/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered -g ${DIR}/genomes/S288C_reference_sequence_R64-1-1_20110203.fsa
+#python ${DIR}/scripts/yeast_annotation_anna_edits.py 
+#       -f ${SNPDIR}/${SAMPLE}_samtools_filtered.vcf 
+#       -s ${DIR}/genomes/orf_coding_all_R64-1-1_20110203.fasta 
+#       -n ${DIR}/genomes/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered 
+#       -g ${DIR}/genomes/S288C_reference_sequence_R64-1-1_20110203.fsa
 
 
 python ${SCRIPTS}/yeast_annotation_chris_edits_20170925.py \
