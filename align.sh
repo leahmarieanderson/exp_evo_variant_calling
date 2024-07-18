@@ -148,25 +148,25 @@ bedtools intersect -v -header \
 # DP[x] or SAF,SAR,SRF,SRR = Array with read depth for Fwd, Rev, and from which strand
 # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
 (>2 echo ***BCFtools - Filter***)
-bcftools filter -O v -o ${SAMPLE}_samtools_filtered.vcf \
+bcftools filter -O v -o ${SAMPLE}_samtools_qualfiltered.vcf \
         -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
         ${SAMPLE}_samtools_AB_AncFiltered.vcf
 
 #Chris recommended a 40x coverage cutoff, but some of my samples are low coverage so I switched it to 10 for now.
-bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
+bcftools filter -O v -o ${SAMPLE}_freebayes_qualfiltered.vcf \
         -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>40 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
         ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
 # intersect samtools by freebayes
 bedtools intersect -header \
-        -a ${SAMPLE}_samtools_filtered.vcf \
-        -b ${SAMPLE}_freebayes_BCBio_AncFiltered.filt.vcf \
-        > ${SAMPLE}_samtools_AB_AncFiltered.filt.Overlap.vcf
+        -a ${SAMPLE}_samtools_qualfiltered.vcf \
+        -b ${SAMPLE}_freebayes_qualfiltered.vcf \
+        > ${SAMPLE}_final.vcf
 
 # Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
 (>2 echo ***Annotate***)
 python3 ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_filtered.vcf \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_final.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
@@ -177,12 +177,19 @@ rm ${SAMPLE}_comb_R1R2.MD.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bai
-rm ${SAMPLE}_comb_R1R2_sort.bam
-rm ${SAMPLE}_comb_R1R2_sort.bam.bai
+rm ${SAMPLE}_R1R2_sort.bam
+rm ${SAMPLE}_R1R2_sort.bam.bai
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam
 rm ${SAMPLE}_R1R2.RG.MD.sort.bam.bai
+rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam
+rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
 
 # remove intermediate samtools and freebayes files
 rm ${SAMPLE}_samtools_AB_AncFiltered.vcf
 rm ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
+# remove some random files were somehow produced by the script (Not sure how it was produced)
+# there is some file called 2 that was created. 
+rm 2
+
+# remove 

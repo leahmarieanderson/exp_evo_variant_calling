@@ -61,9 +61,10 @@ def main(vcf, orfs, noncoding_file, genome_file):
 			noncoding[key_int] = [ l[8].split(';')[0].split('=')[1], chromosome_conversion(l[0][3:]), l[2], int(l[3]), int(l[4]) ]
 		
 	"""ANNOTATE SNPS"""
-
+	# create an output file name by replacing the suffix from our vcf with _annotated_vcf.txt 
+	output_filename = vcf.replace("_final.vcf", "_annotated_vcf.txt")
 	#open output file
-	f_out = open(vcf[0:-21]+"annotated_vcf.txt", 'w')
+	f_out = open(output_filename, 'w')
 
 	#start reading vcf file
 	#chr, start, stop, ref, obs
