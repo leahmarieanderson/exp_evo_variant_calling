@@ -17,6 +17,7 @@ def main():
     # Get new values from the user
     wd_option = get_user_input("Path of directory where your fastq directory is located", "/net/dunham/vol2/Zilong/updating_pipeline_2024")
     mfree_option = get_user_input("How much memory to allocate to job?", "8G")
+    jobname_option = get_user_input("What would you like the job name to be?", "cluster_job")
     h_rt_option = get_user_input("How much runtime to allocate? (HH:MM:SS)", "36:0:0")
     FOLDER_option = get_user_input("What is the name of the directory with your fastq files? \n ex. if fastq files are found in path /net/dunham/vol2/Zilong/updating_pipeline_2024/fastq , then we would just put 'fastq'", "fastq")
     SEQID_option = get_user_input("Give a project name for the bam headers : ", "mutation")
@@ -41,6 +42,8 @@ def main():
             updated_lines.append(f"#$ -l mfree={mfree_option}\n")
         elif line.startswith("#$ -l h_rt"):
             updated_lines.append(f"#$ -l h_rt={h_rt_option}\n")
+        elif line.startswith("#$ -N"):
+            updated_lines.append(f"#$ -N {jobname_option}\n")
         elif line.startswith("FOLDER="):
             updated_lines.append(f"FOLDER={FOLDER_option}\n")
         elif line.startswith("DIR="):

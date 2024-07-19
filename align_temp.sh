@@ -5,6 +5,7 @@
 #$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
+#$ -N 
 
 #set -e
 #set -u
