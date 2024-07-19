@@ -1,5 +1,5 @@
 def get_user_input(prompt, default=None):
-    user_input = input(f"{prompt} \nDefault is :[{default}]\n Just press enter for default value : ")
+    user_input = input(f"\n{prompt} \nDefault is :[{default}]\n Just press enter for default value : \n")
     return user_input if user_input else default
 
 def get_script_path():
