@@ -29,16 +29,16 @@ module load bedtools/2.25.0
 module load freebayes/1.3.6
 
 
-FOLDER=$1
-SAMPLE=$2 # Passed sample prefix (ex: Sample-01)
-ANC=$3
+FOLDER=fastq
+SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
+ANC=$2
 DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SEQID=leah_freeze_evolution # Project name and date for bam header
 REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=/net/dunham/vol2/Cris_L/ReferenceGenome/S288C_reference_genome_R64-1-1_20110203 # Location of custom annotation scripts
-SCRIPTS=/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling/ # Location of custom scripts
+SCRIPTS=/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling/ # Path of annotation_final.py directory
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
 VCFDIR=${WORKDIR}/${ANC}/
 
