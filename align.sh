@@ -157,7 +157,7 @@ bcftools filter -O v -o ${SAMPLE}_freebayes_qualfiltered.vcf \
         -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>40 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
         ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
-# intersect samtools by freebayes
+# intersect samtools by freebayes to create final vcf to annotate
 bedtools intersect -header \
         -a ${SAMPLE}_samtools_qualfiltered.vcf \
         -b ${SAMPLE}_freebayes_qualfiltered.vcf \
@@ -179,8 +179,6 @@ rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bai
 rm ${SAMPLE}_R1R2_sort.bam
 rm ${SAMPLE}_R1R2_sort.bam.bai
-rm ${SAMPLE}_R1R2.RG.MD.sort.bam
-rm ${SAMPLE}_R1R2.RG.MD.sort.bam.bai
 rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
 
@@ -192,4 +190,3 @@ rm ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 # there is some file called 2 that was created. 
 rm 2
 
-# remove 

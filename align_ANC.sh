@@ -131,7 +131,5 @@ rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bai
 rm ${SAMPLE}_comb_R1R2_sort.bam
 rm ${SAMPLE}_comb_R1R2_sort.bam.bai
-rm ${SAMPLE}_R1R2.RG.MD.sort.bam
-rm ${SAMPLE}_R1R2.RG.MD.sort.bam.bai
 rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
