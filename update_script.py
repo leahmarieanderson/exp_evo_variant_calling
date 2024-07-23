@@ -1,70 +1,203 @@
-def get_user_input(prompt, default=None):
-    user_input = input(f"\n{prompt} \nDefault is :[{default}]\n Just press enter for default value : \n")
-    return user_input if user_input else default
+def print_bash_settings(bash_settings):
+    # Print all bash_settings
+    print("\nCurrent Bash Settings:")
+    for setting in bash_settings:
+        print(setting)
 
-def get_script_path():
-    while True:
-        script_path = input("What is the path to your align.sh script?\nExample: /net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling/align.sh\n")
-        if script_path.endswith("align.sh"):
-            return script_path
-        else:
-            print("Error: The path must end with 'align.sh'. Please try again.")
+def print_script_var(script_vars):
+    # Print all script_variables
+    print("\nCurrent Script Variables:")
+    for var in script_vars:
+        print(var)
+
+def remove_last_word(s):
+    # Strip the string of leading and trailing whitespace
+    s = s.strip()
+    
+    # Find the position of the last whitespace
+    last_whitespace_index = s.rfind(' ')
+    
+    # If there's no whitespace, return an empty string (i.e., the string itself is a single word)
+    if last_whitespace_index == -1:
+        return ''
+    
+    # Return the string up to the last whitespace
+    return s[:last_whitespace_index + 1]
+
+def remove_last_var(s):
+    # Strip the string of leading and trailing whitespace
+    s = s.strip()
+    
+    # Find the position of the first equals
+    index = s.find('=')
+    
+    # If there's no equals, return an empty string (i.e., the string itself is a single word)
+    if index == -1:
+        return ''
+    
+    # Return the string up to the last whitespace
+    return s[:index + 1]
+
+def remove_line_marker(arr):
+    new_arr = []
+    for s in arr:
+
+        # Strip the string of leading and trailing whitespace
+        s = s.strip()
+        
+        # Find the position of the first right bracket
+        index = s.find(']')
+
+        comment_index = s.find('#')
+
+        if index == -1:
+            raise RuntimeError("unable to find line marker to remove. Crashing Program.")
+        
+        if comment_index > 5: #removes real comment, reminder that the string looks like '[1] #$ -S /bin/bash' so we have to check after the 5th character
+            new_arr.append(s[index + 2:comment_index])
+        else: # there are no comments or there are '#' at the beginning like with bash code
+            new_arr.append(s[index + 2:])
+    return new_arr
+    
+def find_index_of_substring(strings, substring):
+    for index, s in enumerate(strings):
+        if substring in s:
+            return index
+    return -1  # Return -1 if the substring is not found
 
 def main():
-    # Get script path from user
-    script_path = get_script_path()
-
-    # Get new values from the user
-    wd_option = get_user_input("Path of directory where your fastq directory is located", "/net/dunham/vol2/Zilong/updating_pipeline_2024")
-    mfree_option = get_user_input("How much memory to allocate to job?", "8G")
-    jobname_option = get_user_input("What would you like the job name to be?", "cluster_job")
-    h_rt_option = get_user_input("How much runtime to allocate? (HH:MM:SS)", "36:0:0")
-    FOLDER_option = get_user_input("What is the name of the directory with your fastq files? \n ex. if fastq files are found in path /net/dunham/vol2/Zilong/updating_pipeline_2024/fastq , then we would just put 'fastq'", "fastq")
-    SEQID_option = get_user_input("Give a project name for the bam headers : ", "mutation")
-    REF_option = get_user_input("Path to your reference genome. \n ex. /net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta", "/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta")
-    # ANNOTATE_option = get_user_input("Path to get certain annotation scripts: ", "AB0reseq_S34")
-    SCRIPTS_option = get_user_input("Path to your directory containing annotation_final.py", "/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling/")
-
     # Read the existing script
-    with open(script_path, "r") as file:
-        lines = file.readlines()
+    with open('align.sh', "r") as script:
+        script_lines = script.readlines()
 
+    # Initialize lists and counters
+    bash_settings = []
+    script_variables = []
+    bash_line_num = 0
+    script_var_line_num = 0
+
+    # Iterate through script_lines and categorize lines
+    for line in script_lines:
+        if line.startswith("#$ -"):
+            bash_settings.append(f"[{bash_line_num}] {line}")
+            bash_line_num += 1
+        elif line.startswith("FOLDER="):
+            script_variables.append(f"[{script_var_line_num}] {line}")
+            script_var_line_num += 1
+        elif line.startswith("DIR="):
+            script_variables.append(f"[{script_var_line_num}] {line}")
+            script_var_line_num += 1
+        elif line.startswith("SEQID="):
+            script_variables.append(f"[{script_var_line_num}] {line}")
+            script_var_line_num += 1
+        elif line.startswith("REF="):
+            script_variables.append(f"[{script_var_line_num}] {line}")
+            script_var_line_num += 1
+        elif line.startswith("SCRIPTS="):
+            script_variables.append(f"[{script_var_line_num}] {line}")
+            script_var_line_num += 1
+    
+    # allow user to change bash settings
+    print_bash_settings(bash_settings)
+    while True:
+        user_input = input("Enter the number of the line to change (type 'c' to finish changes): ")
+        if user_input.lower() == 'c':
+            print_bash_settings(bash_settings)
+            break
+        elif user_input.isdigit() and int(user_input) < bash_line_num:
+            user_changes = input("What would you like to change this to? : ").replace(" ","") # get input and remove whitespaces from input
+            if(bash_settings[int(user_input)].find('=') == -1): # no equals character so we replace word after last whitespace
+                bash_settings[int(user_input)] = remove_last_word(bash_settings[int(user_input)]) + user_changes 
+            else: # there is an equals so we have to replace word after equals 
+                bash_settings[int(user_input)] = remove_last_var(bash_settings[int(user_input)]) + user_changes 
+            print_bash_settings(bash_settings)
+        else:
+            print("This is not a valid number")
+
+    print_script_var(script_variables)
+    while True:
+        user_input = input("Enter the number of the line to change (type 'c' to finish changes): ")
+        if user_input.lower() == 'c':
+            print_script_var(script_variables)
+            break
+        elif user_input.isdigit() and int(user_input) < script_var_line_num: # script variables always have equals character
+            user_changes = input("What would you like to change this to? : ").replace(" ","") # get input and remove whitespaces from input
+            
+            script_variables[int(user_input)] = remove_last_var(script_variables[int(user_input)]) + user_changes 
+            print_script_var(script_variables)
+        else:
+            print("This is not a valid number")
+
+    bash_settings = remove_line_marker(bash_settings)
+    script_variables = remove_line_marker(script_variables)
+
+    # get index of each options from the arrays bash_settings and script variables
+    shell_index = find_index_of_substring(bash_settings, ('#$ -S'))
+    wd_index = find_index_of_substring(bash_settings, ('#$ -wd'))
+    out_index = find_index_of_substring(bash_settings, ('#$ -o'))
+    err_index = find_index_of_substring(bash_settings, ('#$ -e'))
+    mfree_index = find_index_of_substring(bash_settings, ('#$ -l mfree'))
+    h_rt_index = find_index_of_substring(bash_settings, ('#$ -l h_rt'))
+    jobname_index = find_index_of_substring(bash_settings, ('#$ -N'))
+    FOLDER_index = find_index_of_substring(script_variables, ('FOLDER='))
+    DIR_index = find_index_of_substring(script_variables, ('DIR='))
+    SEQID_index = find_index_of_substring(script_variables, ('SEQID='))
+    REF_index = find_index_of_substring(script_variables, ('REF='))
+    SCRIPTS_index = find_index_of_substring(script_variables, ('SCRIPTS='))
+
+    # Get options to respective strings
+    shell_option = bash_settings[shell_index]
+    wd_option = bash_settings[wd_index]
+    out_option = bash_settings[out_index]
+    err_option = bash_settings[err_index]
+    mfree_option = bash_settings[mfree_index]
+    h_rt_option = bash_settings[h_rt_index]
+    jobname_option = bash_settings[jobname_index]
+    FOLDER_option = script_variables[FOLDER_index]
+    DIR_option = script_variables[DIR_index]
+    SEQID_option = script_variables[SEQID_index]
+    REF_option = script_variables[REF_index]
+    SCRIPTS_option = script_variables[SCRIPTS_index]
+
+    # open align script to read through all lines
+    with open('align.sh', "r") as file:
+        lines = file.readlines()
+    
     # Update specific lines
     updated_lines = []
     for line in lines:
-        if line.startswith("#$ -wd"):
-            updated_lines.append(f"#$ -wd {wd_option}\n")
+        if line.startswith("#$ -S"):
+            updated_lines.append(f"{shell_option}\n")
+        elif line.startswith("#$ -wd"):
+            updated_lines.append(f"{wd_option}\n")
         elif line.startswith("#$ -o"):
-            updated_lines.append(f"#$ -o {wd_option}/outputs/\n")
+            updated_lines.append(f"{out_option}\n")
         elif line.startswith("#$ -e"):
-            updated_lines.append(f"#$ -e {wd_option}/errors/\n")
+            updated_lines.append(f"{err_option}\n")
         elif line.startswith("#$ -l mfree"):
-            updated_lines.append(f"#$ -l mfree={mfree_option}\n")
+            updated_lines.append(f"{mfree_option}\n")
         elif line.startswith("#$ -l h_rt"):
-            updated_lines.append(f"#$ -l h_rt={h_rt_option}\n")
+            updated_lines.append(f"{h_rt_option}\n")
         elif line.startswith("#$ -N"):
-            updated_lines.append(f"#$ -N {jobname_option}\n")
+            updated_lines.append(f"{jobname_option}\n")
         elif line.startswith("FOLDER="):
-            updated_lines.append(f"FOLDER={FOLDER_option}\n")
+            updated_lines.append(f"{FOLDER_option}\n")
         elif line.startswith("DIR="):
-            updated_lines.append(f"DIR={wd_option}\n")
+            updated_lines.append(f"{DIR_option}\n")
         elif line.startswith("SEQID="):
-            updated_lines.append(f"SEQID={SEQID_option} # Project name and date for bam header\n")
+            updated_lines.append(f"{SEQID_option} # Project name and date for bam header\n")
         elif line.startswith("REF="):
-            updated_lines.append(f"REF={REF_option} # Reference genome\n")
-        # commenting out ANNOTATE for now since I don't k
-        #elif line.startswith("ANNOTATE="):
-        #    updated_lines.append(f"ANNOTATE={}\n")
+            updated_lines.append(f"{REF_option} # Reference genome\n")
         elif line.startswith("SCRIPTS="):
-            updated_lines.append(f"SCRIPTS={SCRIPTS_option} # Path of annotation_final.py directory\n")
+            updated_lines.append(f"{SCRIPTS_option} # Path of annotation_final.py directory\n")
         else:
             updated_lines.append(line)
 
     # Write the updated script back to the file
-    with open(script_path, "w") as file:
+    with open('align.sh', "w") as file:
         file.writelines(updated_lines)
 
-    print(f"Script '{script_path}' updated successfully.")
+    print("Script 'align.sh' updated successfully.")
 
 if __name__ == "__main__":
     main()
