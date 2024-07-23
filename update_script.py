@@ -66,8 +66,10 @@ def find_index_of_substring(strings, substring):
     return -1  # Return -1 if the substring is not found
 
 def main():
+    script_name = 'align.sh'
+    
     # Read the existing script
-    with open('align.sh', "r") as script:
+    with open(script_name, "r") as script:
         script_lines = script.readlines()
 
     # Initialize lists and counters
@@ -160,7 +162,7 @@ def main():
     SCRIPTS_option = script_variables[SCRIPTS_index]
 
     # open align script to read through all lines
-    with open('align.sh', "r") as file:
+    with open(script_name, "r") as file:
         lines = file.readlines()
     
     # Update specific lines
