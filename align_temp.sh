@@ -26,7 +26,6 @@ module load perl/5.26.3
 module load VCFtools/0.1.16-20
 module load bcftools/1.19
 module load bedtools/2.25.0
-module load freebayes/1.3.6
 
 
 FOLDER=fastq
@@ -139,7 +138,7 @@ bedtools intersect -v -header \
 # For this script, we are only using samtools
 (>2 echo ***BCFtools - Filter***)
 bcftools filter -O v -o ${SAMPLE}_final.vcf \
-        -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
+        -i 'MQ>30 & QUAL>150 & DP>75 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
         ${SAMPLE}_samtools_AB_AncFiltered.vcf
 
 # Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
