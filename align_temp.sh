@@ -35,9 +35,9 @@ DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SEQID=leah_freeze_evolution # Project name and date for bam header
-REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
-ANNOTATE=/net/dunham/vol2/Cris_L/ReferenceGenome/S288C_reference_genome_R64-1-1_20110203 # Location of custom annotation scripts
-SCRIPTS=/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling/ # Path of annotation_final.py directory
+REF=${DIR}/genomes/sacCer3.fasta # Reference genome
+ANNOTATE=${DIR}/genomes # Location of custom annotation scripts
+SCRIPTS=/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling # Path of annotation_final.py directory
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
 VCFDIR=${WORKDIR}/${ANC}/
 
@@ -129,6 +129,15 @@ bedtools intersect -v -header \
         -b ${VCFDIR}/${ANC}_samtools_AB.vcf \
         > ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf
 
+# Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
+# Annotate the ancestor filtered vcf
+(>2 echo ***Annotate***)
+python3 ${SCRIPTS}/annotation_final.py \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf \
+        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+
 # Many filtering steps
 # MQ or MQM = Mapping quality
 # QUAL = Metric that is specific for the variant caller that denotes confidence
@@ -137,14 +146,14 @@ bedtools intersect -v -header \
 # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
 # For this script, we are only using samtools
 (>2 echo ***BCFtools - Filter***)
-bcftools filter -O v -o ${SAMPLE}_final.vcf \
-        -i 'MQ>30 & QUAL>150 & DP>75 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
+bcftools filter -O v -o ${SAMPLE}_stringent.vcf \
+        -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
         ${SAMPLE}_samtools_AB_AncFiltered.vcf
 
 # Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
 (>2 echo ***Annotate***)
 python3 ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_final.vcf \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_stringent.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
@@ -164,3 +173,23 @@ rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
 # there is some file called 2 that was created. 
 rm 2
 
+# make directories and organize files
+cd ${WORKDIR}/${SAMPLE}
+
+mkdir results
+
+mkdir bams
+
+mkdir intermediate_vcfs  
+
+# move files into directories
+
+mv ${SAMPLE}_stringent_annotated_vcf.txt results
+mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt results
+
+mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam bams
+mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam.bai bams
+
+mv ${SAMPLE}_stringent.vcf intermediate_vcfs
+mv ${SAMPLE}_samtools_AB_AncFiltered.vcf intermediate_vcfs
+mv ${SAMPLE}_samtools_AB.vcf intermediate_vcfs

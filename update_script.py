@@ -1,3 +1,63 @@
+import os
+import glob
+import subprocess
+import sys
+
+def find_second_underscore(s):
+    first_index = s.find('_')
+    if first_index == -1:
+        return -1  # No underscores found
+    second_index = s.find('_', first_index + 1)
+    return second_index
+
+def submit_job(script_name, sample_name, ancestor_name):
+    # Print the command for debugging purposes
+    print(f"Submitting job for sample: {sample_name} with ancestor: {ancestor_name}")
+    
+    # Run the command to submit the job
+    subprocess.run(['qsub', script_name, sample_name, ancestor_name])
+
+def get_sample_names(directory):
+    # Get all R1 sample files
+    R1files = glob.glob(os.path.join(directory, '*R1*'))
+    # Get all R2 sample files
+    R2files = glob.glob(os.path.join(directory, '*R2*'))
+    
+    # Ensure both lists have the same number of files
+    if len(R1files) != len(R2files):
+        raise ValueError("The number of R1 files does not match the number of R2 files.")
+    
+    # Sort both lists
+    R1files.sort()
+    R2files.sort()
+    
+    # Ensure that each R1 file has a corresponding R2 file with the same prefix
+    for R1, R2 in zip(R1files, R2files):
+        R1_prefix = os.path.basename(R1).split('R1')[0]
+        R2_prefix = os.path.basename(R2).split('R2')[0]
+        
+        if R1_prefix != R2_prefix:
+            raise ValueError(f"Prefix mismatch between files: {R1} and {R2}")
+
+    sample_name_list = []
+    for file_path in R1files:
+        # Extract the sample name from the file name
+        file_name = os.path.basename(file_path)
+        sample_name_end_index = find_second_underscore(file_name)
+        sample_name = file_name[:sample_name_end_index]
+        sample_name_list.append(sample_name)
+
+    return sample_name_list
+
+def multi_qsub(script_name, directory, ancestor_name):
+    # directory should be the path to your fastq directory
+    samples = get_sample_names(directory)
+   
+    # Submit a job for each file
+    for sample_name in samples:
+        if sample_name != ancestor_name: # only qsub for with the samples, not ancestor
+            submit_job(script_name, sample_name, ancestor_name)
+
 def print_bash_settings(bash_settings):
     # Print all bash_settings
     print("\nCurrent Bash Settings:")
@@ -66,7 +126,7 @@ def find_index_of_substring(strings, substring):
     return -1  # Return -1 if the substring is not found
 
 def main():
-    script_name = 'align.sh'
+    script_name = 'align_temp.sh'
     
     # Read the existing script
     with open(script_name, "r") as script:
@@ -147,19 +207,19 @@ def main():
     REF_index = find_index_of_substring(script_variables, ('REF='))
     SCRIPTS_index = find_index_of_substring(script_variables, ('SCRIPTS='))
 
-    # Get options to respective strings
-    shell_option = bash_settings[shell_index]
-    wd_option = bash_settings[wd_index]
-    out_option = bash_settings[out_index]
-    err_option = bash_settings[err_index]
-    mfree_option = bash_settings[mfree_index]
-    h_rt_option = bash_settings[h_rt_index]
-    jobname_option = bash_settings[jobname_index]
-    FOLDER_option = script_variables[FOLDER_index]
-    DIR_option = script_variables[DIR_index]
-    SEQID_option = script_variables[SEQID_index]
-    REF_option = script_variables[REF_index]
-    SCRIPTS_option = script_variables[SCRIPTS_index]
+    # Get options to respective strings and use .strip() to remove leading and trailing whitespace
+    shell_option = bash_settings[shell_index].strip()
+    wd_option = bash_settings[wd_index].strip()
+    out_option = bash_settings[out_index].strip()
+    err_option = bash_settings[err_index].strip()
+    mfree_option = bash_settings[mfree_index].strip()
+    h_rt_option = bash_settings[h_rt_index].strip()
+    jobname_option = bash_settings[jobname_index].strip()
+    FOLDER_option = script_variables[FOLDER_index].strip()
+    DIR_option = script_variables[DIR_index].strip()
+    SEQID_option = script_variables[SEQID_index].strip()
+    REF_option = script_variables[REF_index].strip()
+    SCRIPTS_option = script_variables[SCRIPTS_index].strip()
 
     # open align script to read through all lines
     with open(script_name, "r") as file:
@@ -196,10 +256,20 @@ def main():
             updated_lines.append(line)
 
     # Write the updated script back to the file
-    with open('align.sh', "w") as file:
+    with open(script_name, "w") as file:
         file.writelines(updated_lines)
 
-    print("Script 'align.sh' updated successfully.")
+    print(f"Script '{script_name}' updated.")
 
-if __name__ == "__main__":
+    fastq_dir = DIR_option[4:] + "/" + FOLDER_option[7:] + "/"
+    print(fastq_dir)
+    # prompts user if they want to qsub all samples(except ancestor) in their ${DIR}/${FOLDER} i.e. your fastq folder
+    user_submit = input(f"Would you like to qsub all samples in {fastq_dir} ? (y/n) : ")
+    if user_submit.lower() == 'y':
+        ancestor_name = input("What is the name of the ancestor? : ")
+        multi_qsub(script_name, fastq_dir, ancestor_name)
+    else: 
+        print("No qsub has been selected. Script completed successfully.")
+
+if __name__ == '__main__':
     main()

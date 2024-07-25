@@ -62,7 +62,7 @@ def main(vcf, orfs, noncoding_file, genome_file):
 		
 	"""ANNOTATE SNPS"""
 	# create an output file name by replacing the suffix from our vcf with _annotated_vcf.txt 
-	output_filename = vcf.replace("_final.vcf", "_annotated_vcf.txt")
+	output_filename = vcf.replace(".vcf", "_annotated_vcf.txt")
 	#open output file
 	f_out = open(output_filename, 'w')
 

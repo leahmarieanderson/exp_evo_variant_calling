@@ -29,13 +29,13 @@ module load bedtools/2.25.0
 module load freebayes/1.3.6
 
 
-FOLDER=$1
-ANC=$2
+FOLDER=fastq
+ANC=$1
 DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SEQID=leah_freeze_evolution # Project name and date for bam header
-REF=/net/dunham/vol2/Zilong/updating_pipeline_2024/genomes/sacCer3.fasta # Reference genome
+REF=${DIR}/genomes/sacCer3.fasta # Reference genome
 
 # Sets up folder structure
 mkdir -p ${WORKDIR}/${ANC}
