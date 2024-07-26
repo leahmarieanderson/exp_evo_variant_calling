@@ -124,12 +124,12 @@ freebayes -f ${REF} \
         ${ANC}_comb_R1R2.RG.MD.realign.sort.bam > ${ANC}_freebayes_BCBio.vcf
 
 # Remove intermediates
-rm ${SAMPLE}_comb_R1R2.bam.intervals
-rm ${SAMPLE}_comb_R1R2.MD.bam
-rm ${SAMPLE}_comb_R1R2.RG.MD.bam
-rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bam
-rm ${SAMPLE}_comb_R1R2.RG.MD.realign.bai
-rm ${SAMPLE}_comb_R1R2_sort.bam
-rm ${SAMPLE}_comb_R1R2_sort.bam.bai
-rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam
-rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
+rm ${ANC}_comb_R1R2.bam.intervals
+rm ${ANC}_comb_R1R2.MD.bam
+rm ${ANC}_comb_R1R2.RG.MD.bam
+rm ${ANC}_comb_R1R2.RG.MD.realign.bam
+rm ${ANC}_comb_R1R2.RG.MD.realign.bai
+rm ${ANC}_R1R2_sort.bam
+rm ${ANC}_R1R2_sort.bam.bai
+rm ${ANC}_comb_R1R2.RG.MD.sort.bam
+rm ${ANC}_comb_R1R2.RG.MD.sort.bam.bai
