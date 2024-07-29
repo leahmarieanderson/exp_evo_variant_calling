@@ -11,7 +11,23 @@ def find_second_underscore(s):
     return second_index
 
 def submit_job(script_name, sample_name, ancestor_name):
-    # Print the command for debugging purposes
+    # update script to set job name to sample_name
+    with open(script_name, "r") as file:
+        lines = file.readlines()
+    
+    # update the name
+    updated_lines = []
+    for line in lines:
+        if line.startswith("#$ -N"):
+            updated_lines.append(f"#$ -N {sample_name}\n")
+        else:
+            updated_lines.append(line)
+
+    # Write the updated script back to the file
+    with open(script_name, "w") as file:
+        file.writelines(updated_lines)
+
+    # Print job submission details
     print(f"Submitting job for sample: {sample_name} with ancestor: {ancestor_name}")
     
     # Run the command to submit the job
@@ -141,8 +157,9 @@ def main():
     # Iterate through script_lines and categorize lines
     for line in script_lines:
         if line.startswith("#$ -"):
-            bash_settings.append(f"[{bash_line_num}] {line}")
-            bash_line_num += 1
+            if(not line.startswith("#$ -N")):
+                bash_settings.append(f"[{bash_line_num}] {line}")
+                bash_line_num += 1
         elif line.startswith("FOLDER="):
             script_variables.append(f"[{script_var_line_num}] {line}")
             script_var_line_num += 1
@@ -200,7 +217,6 @@ def main():
     err_index = find_index_of_substring(bash_settings, ('#$ -e'))
     mfree_index = find_index_of_substring(bash_settings, ('#$ -l mfree'))
     h_rt_index = find_index_of_substring(bash_settings, ('#$ -l h_rt'))
-    jobname_index = find_index_of_substring(bash_settings, ('#$ -N'))
     FOLDER_index = find_index_of_substring(script_variables, ('FOLDER='))
     DIR_index = find_index_of_substring(script_variables, ('DIR='))
     SEQID_index = find_index_of_substring(script_variables, ('SEQID='))
@@ -214,7 +230,6 @@ def main():
     err_option = bash_settings[err_index].strip()
     mfree_option = bash_settings[mfree_index].strip()
     h_rt_option = bash_settings[h_rt_index].strip()
-    jobname_option = bash_settings[jobname_index].strip()
     FOLDER_option = script_variables[FOLDER_index].strip()
     DIR_option = script_variables[DIR_index].strip()
     SEQID_option = script_variables[SEQID_index].strip()
@@ -241,7 +256,7 @@ def main():
         elif line.startswith("#$ -l h_rt"):
             updated_lines.append(f"{h_rt_option}\n")
         elif line.startswith("#$ -N"):
-            updated_lines.append(f"{jobname_option}\n")
+            updated_lines.append("#$ -N \n")
         elif line.startswith("FOLDER="):
             updated_lines.append(f"{FOLDER_option}\n")
         elif line.startswith("DIR="):
@@ -268,6 +283,22 @@ def main():
     if user_submit.lower() == 'y':
         ancestor_name = input("What is the name of the ancestor? : ")
         multi_qsub(script_name, fastq_dir, ancestor_name)
+        
+        # update script to reset job name
+        with open(script_name, "r") as file:
+            lines = file.readlines()
+        
+        # reset the name line
+        updated_lines = []
+        for line in lines:
+            if line.startswith("#$ -N"):
+                updated_lines.append(f"#$ -N\n")
+            else:
+                updated_lines.append(line)
+
+        # Write the updated script back to the file
+        with open(script_name, "w") as file:
+            file.writelines(updated_lines)
     else: 
         print("No qsub has been selected. Script completed successfully.")
 
