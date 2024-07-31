@@ -146,10 +146,14 @@ def main(vcf, orfs, noncoding_file, genome_file):
 								wt_aa = lookup_codon(''.join(wt_gene[codon:codon+3]))
 								if mut_aa != wt_aa:
 									# NICOLE'S CHANGES: changed below line to match python 3 syntax
-									print('\t'.join(l + ['coding-nonsynonymous', genes[g][0], wt_aa + str(codon/3+1) + mut_aa]), file=f_out)
+									# check if nonsense or missense
+									if(mut_aa == "*"):
+										print('\t'.join(l + ['nonsense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
+									else:
+										print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
 								else:
 									# NICOLE'S CHANGES: fixed below syntax
-									print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(codon/3+1) + mut_aa]), file=f_out)
+									print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
 					
 						annotation = True
 						print ('Crick')
@@ -201,10 +205,14 @@ def main(vcf, orfs, noncoding_file, genome_file):
 								#check if synonymous, non-synonymous
 								if mut_aa != wt_aa:
 									# NICOLE'S CHANGES: below line is the updated python 3 syntax
-									print('\t'.join(l + ['coding-nonsynonymous', genes[g][0], wt_aa + str(codon /3+1) + mut_aa]), file=f_out)
+									# check if nonsense or missense
+									if(mut_aa == "*"):
+										print('\t'.join(l + ['nonsense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
+									else:
+										print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
 								else:
 									# NICOLE'S CHANGES: below line is the updated python 3 syntax
-									print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(codon/3+1) + mut_aa]), file=f_out)
+									print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
 
 								annotation = True
 								print ('watson')
