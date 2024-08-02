@@ -142,7 +142,8 @@ def find_index_of_substring(strings, substring):
     return -1  # Return -1 if the substring is not found
 
 def main():
-    script_name = 'align_temp.sh'
+    # CHANGE THIS TO YOUR ALIGN SCRIPT
+    script_name = 'align.sh'
     
     # Read the existing script
     with open(script_name, "r") as script:
