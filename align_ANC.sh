@@ -120,7 +120,7 @@ bcftools mpileup --ignore-RG -Ou -ABf ${REF} ${ANC}_comb_R1R2.RG.MD.realign.sort
 
 # Freebayes with a lot of arguments for population calling
 freebayes -f ${REF} \
-        --pooled-discrete --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
+        --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
         ${ANC}_comb_R1R2.RG.MD.realign.sort.bam > ${ANC}_freebayes_BCBio.vcf
 
 # Remove intermediates
