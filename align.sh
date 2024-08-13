@@ -16,17 +16,17 @@
 ## Then filters based on the ancestral sequence
 
 module load modules modules-init modules-gs
-module load zlib/1.2.13_compat
-module load bwa/0.7.15
-module load htslib/1.18
-module load samtools/1.14
+module load zlib/1.3.1
+module load bwa/0.7.17
+module load htslib/1.19
+module load samtools/1.19
 module load picard/3.1.1
 module load GATK/3.7
 module load python/3.12.1 numpy biopython lofreq/2.1.5-18
-module load perl/5.26.3
+module load perl/5.38.2
 module load VCFtools/0.1.16-20
-module load bcftools/1.19
-module load bedtools/2.25.0
+module load bcftools/1.20
+module load bedtools/2.31.1
 module load freebayes/1.3.6
 
 
@@ -157,6 +157,17 @@ bedtools intersect -v -header \
         -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
         > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf
 
+# After filtering ancestor out, intersect all ancestor-filtered vcfs
+bedtools intersect -header \
+        -a ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf \
+        -b ${SAMPLE}_samtools_AB_AncFiltered.vcf \
+        > ${SAMPLE}_FB_ST_AncFilt.vcf
+
+bedtools intersect -header \
+        -a ${SAMPLE}_FB_ST_AncFilt.vcf \
+        -b ${SAMPLE}_lofreq_AncFiltered.vcf \
+        > ${SAMPLE}_final_AncFilt.vcf
+
 (>2 echo ***Annotate***)
 python3 ${SCRIPTS}/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf \
@@ -172,6 +183,12 @@ python3 ${SCRIPTS}/annotation_final.py \
 
 python3 ${SCRIPTS}/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf \
+        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+
+python3 ${SCRIPTS}/annotation_final.py \
+        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_final_AncFilt.vcf \
         -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
@@ -197,16 +214,16 @@ bcftools filter -O v -o ${SAMPLE}_lofreq_stringent.vcf \
        ${SAMPLE}_lofreq_AncFiltered.vcf
 
 
-# intersect samtools by freebayes to create final vcf to annotate
-bedtools intersect -header \
-        -a ${SAMPLE}_samtools_stringent.vcf \
-        -b ${SAMPLE}_freebayes_stringent.vcf \
-        > ${SAMPLE}_ST_FB_stringent.vcf
+# intersect freebayes by samtools to create final vcf to annotate
+bedtools intersect -wao -header \
+        -a ${SAMPLE}_freebayes_stringent.vcf \
+        -b ${SAMPLE}_samtools_stringent.vcf \
+        > ${SAMPLE}_FB_ST_stringent.vcf
 
 # intersect samtools by freebayes to create final vcf to annotate
-bedtools intersect -wa -wb -header \
-        -a ${SAMPLE}_ST_FB_stringent.vcf \
-        -b ${SAMPLE}_lofreq_stringent.vcf \
+bedtools intersect -wao -header \
+        -a ${SAMPLE}_lofreq_stringent.vcf \
+        -b ${SAMPLE}_FB_ST_stringent.vcf \
         > ${SAMPLE}_final_stringent.vcf
 
 # Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
@@ -271,6 +288,7 @@ mv ${SAMPLE}_final_stringent_annotated_vcf.txt results
 mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt results
 mv ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt results
 mv ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt results
+mv ${SAMPLE}_final_AncFilt_annotated_vcf.txt results
 
 mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam bams
 mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam.bai bams
@@ -284,4 +302,6 @@ mv ${SAMPLE}_freebayes_BCBio.vcf intermediate_vcfs
 mv ${SAMPLE}_freebayes_stringent.vcf intermediate_vcfs
 mv ${SAMPLE}_lofreq_AncFiltered.vcf intermediate_vcfs
 mv ${SAMPLE}_lofreq_stringent.vcf intermediate_vcfs
-mv ${SAMPLE}_ST_FB_stringent.vcf intermediate_vcfs
+mv ${SAMPLE}_FB_ST_stringent.vcf intermediate_vcfs
+mv ${SAMPLE}_FB_ST_AncFilt.vcf intermediate_vcfs
+mv ${SAMPLE}_final_AncFilt.vcf intermediate_vcfs

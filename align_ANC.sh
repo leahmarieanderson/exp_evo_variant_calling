@@ -15,17 +15,17 @@
 ## Then filters based on the ancestral sequence
 
 module load modules modules-init modules-gs
-module load zlib/1.2.13_compat
-module load bwa/0.7.15
-module load htslib/1.18
-module load samtools/1.14
+module load zlib/1.3.1
+module load bwa/0.7.17
+module load htslib/1.19
+module load samtools/1.19
 module load picard/3.1.1
 module load GATK/3.7
 module load python/3.12.1 numpy biopython
-module load perl/5.26.3
+module load perl/5.38.2
 module load VCFtools/0.1.16-20
-module load bcftools/1.19
-module load bedtools/2.25.0
+module load bcftools/1.20
+module load bedtools/2.31.1
 module load freebayes/1.3.6
 
 
