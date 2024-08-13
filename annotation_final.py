@@ -72,6 +72,8 @@ def main(vcf, orfs, noncoding_file, genome_file):
 	Pos = 1
 	Ref = 3
 	Alt = 4
+	Info = 7
+
 	for line in open(vcf, 'r'):
 		#if it's a header, then print out more header to the next line
 		if 'POS' in line:
@@ -138,25 +140,37 @@ def main(vcf, orfs, noncoding_file, genome_file):
 								
 							mut_gene += list(complement(mut_chr[ int(exon[1])-1:int(exon[0]) ])[::-1])
 							wt_gene += list(complement(genome[genes[g][6]][ int(exon[1])-1:int(exon[0]) ])[::-1])
-													
-						#loop through codons, find mismatch
-						for codon in range(0, len(mut_gene), 3):
-							if mut_gene[codon:codon+3] != wt_gene[codon:codon+3]:
-								mut_aa = lookup_codon(''.join(mut_gene[codon:codon+3]))
-								wt_aa = lookup_codon(''.join(wt_gene[codon:codon+3]))
-								if mut_aa != wt_aa:
-									# NICOLE'S CHANGES: changed below line to match python 3 syntax
-									# check if nonsense or missense
-									if(mut_aa == "*"):
-										print('\t'.join(l + ['nonsense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
+
+						# check if multi-allelic
+						l = line.strip().split('\t')
+						if(',' in l[Alt]): # There is more than one allele transformation
+							print('\t'.join(l + ['multi-allelic', genes[g][0], 'NA']), file=f_out)
+						else:
+							#loop through codons, find mismatch
+							for codon in range(0, len(mut_gene), 3):
+								if(',' in l[Alt]): # There is more than one allele transformation
+									print('\t'.join(l + ['multi-allelic', genes[g][0], wt_aa + str(int(codon /3+1)) + 'multiple']), file=f_out)
+								elif mut_gene[codon:codon+3] != wt_gene[codon:codon+3]:
+									mut_aa = lookup_codon(''.join(mut_gene[codon:codon+3]))
+									wt_aa = lookup_codon(''.join(wt_gene[codon:codon+3]))
+									if mut_aa != wt_aa:
+										# NICOLE'S CHANGES: changed below line to match python 3 syntax
+										# check if nonsense, indel, or missense
+										if(mut_aa == "*"):
+											print('\t'.join(l + ['nonsense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
+										elif('INDEL' in l[Info] or abs(len(l[Alt]) - len(l[Ref])) > 0):
+											if((len(l[Alt]) - len(l[Ref])) % 3 == 0): # codon(s) has been inserted
+												print('\t'.join(l + ['indel-inframe', genes[g][0], wt_aa + str(int(codon /3+1)) + 'indel']), file=f_out)
+											else: # insertion or deletion of more than just codon(s) has shifted the frame i.e. non-multiple of 3 has been inserted/deleted
+												print('\t'.join(l + ['indel-frameshift', genes[g][0], wt_aa + str(int(codon /3+1)) + 'indel']), file=f_out)
+										else:
+											print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
 									else:
-										print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
-								else:
-									# NICOLE'S CHANGES: fixed below syntax
-									print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
-					
-						annotation = True
-						print ('Crick')
+										# NICOLE'S CHANGES: fixed below syntax
+										print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
+						
+							annotation = True
+							print ('Crick')
 					#if snp_pos isn't in a gene, check if it's upstream of a gene
 					elif snp_pos in range(genes[g][1]+1,genes[g][1]+201):
 						# NICOLE'S CHANGES: changed below line to match python 3 syntax
@@ -197,27 +211,37 @@ def main(vcf, orfs, noncoding_file, genome_file):
 							mut_gene += list(mut_chr[ int(exon[0])-1:int(exon[1]) ])
 							wt_gene += list(genome[genes[g][6]][int(exon[0])-1:int(exon[1])])
 
-						#loop through codons, find mismatch
-						for codon in range(0, len(mut_gene), 3):
-							if mut_gene[codon:codon+3] != wt_gene[codon:codon+3]:
-								mut_aa = lookup_codon(''.join(mut_gene[codon:codon+3]))
-								wt_aa = lookup_codon(''.join(wt_gene[codon:codon+3]))
-								#check if synonymous, non-synonymous
-								if mut_aa != wt_aa:
-									# NICOLE'S CHANGES: below line is the updated python 3 syntax
-									# check if nonsense or missense
-									if(mut_aa == "*"):
-										print('\t'.join(l + ['nonsense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
+						# check if multi-allelic
+						l = line.strip().split('\t')
+						if(',' in l[Alt]): # There is more than one allele transformation
+							print('\t'.join(l + ['multi-allelic', genes[g][0], 'NA']), file=f_out)
+						else:
+							#loop through codons, find mismatch
+							for codon in range(0, len(mut_gene), 3):
+								if mut_gene[codon:codon+3] != wt_gene[codon:codon+3]:
+									mut_aa = lookup_codon(''.join(mut_gene[codon:codon+3]))
+									wt_aa = lookup_codon(''.join(wt_gene[codon:codon+3]))
+									#check if synonymous, non-synonymous
+									if mut_aa != wt_aa:
+										# NICOLE'S CHANGES: below line is the updated python 3 syntax
+										# check if nonsense, indel, or missense
+										if(mut_aa == "*"):
+											print('\t'.join(l + ['nonsense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
+										elif('INDEL' in l[Info] or abs(len(l[Alt]) - len(l[Ref])) > 0):
+											if((len(l[Alt]) - len(l[Ref])) % 3 == 0): # codon(s) has been inserted
+												print('\t'.join(l + ['indel-inframe', genes[g][0], wt_aa + str(int(codon /3+1)) + 'indel']), file=f_out)
+											else: # insertion or deletion of more than just codon(s) has shifted the frame i.e. non-multiple of 3 has been inserted/deleted
+												print('\t'.join(l + ['indel-frameshift', genes[g][0], wt_aa + str(int(codon /3+1)) + 'indel']), file=f_out)
+										else:
+											print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
 									else:
-										print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
-								else:
-									# NICOLE'S CHANGES: below line is the updated python 3 syntax
-									print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
+										# NICOLE'S CHANGES: below line is the updated python 3 syntax
+										print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
 
-								annotation = True
-								print ('watson')
-						
-						annotation = True
+									annotation = True
+									print ('watson')
+							
+							annotation = True
 									
 					#if snp isn't in a gene, check if it's in the upstream region of a gene
 					elif snp_pos in range(genes[g][1]-200,genes[g][1]):
@@ -285,8 +309,9 @@ def lookup_codon(codon):
 			'ttn': 'missing', 'tcn': 'S', 'tan': 'missing', 'tgn': 'missing',
 			'ctn': 'L', 'ccn': 'P', 'can': 'missing', 'cgn': 'R',
 			'atn': 'missing', 'acn': 'T', 'aan': 'missing', 'agn': 'missing',
-			'gtn': 'V', 'gcn': 'A', 'gan': 'missing', 'ggn': 'G',
-			'aax': 'indel', 'agx': 'indel', 'acx': 'indel', 'anx': 'indel', 'axn': 'indel',
+			'gtn': 'V', 'gcn': 'A', 'gan': 'missing', 'ggn': 'G'}
+
+	'''		'aax': 'indel', 'agx': 'indel', 'acx': 'indel', 'anx': 'indel', 'axn': 'indel',
 			'atx': 'indel', 'axa': 'indel', 'axg': 'indel', 'nxa': 'indel', 'xna': 'indel',
 			'axc': 'indel', 'axt': 'indel', 'axx': 'indel', 'cnx': 'indel', 'cxn': 'indel',
 			'gax': 'indel', 'ggx': 'indel', 'gcx': 'indel', 'nxc': 'indel', 'xnc': 'indel',
@@ -305,8 +330,10 @@ def lookup_codon(codon):
 			'xcc': 'indel', 'xct': 'indel', 'xcx': 'indel', 'xnx': 'indel',
 			'xta': 'indel', 'xtg': 'indel', 'xtc': 'indel', 'nxx': 'indel',
 			'xtt': 'indel', 'xtx': 'indel', 'xxa': 'indel', 'nnx': 'indel',
-			'xxg': 'indel', 'xxc': 'indel', 'xxt': 'indel', 'xxx': 'indel'}
-	return lookup[codon.lower()]
+			'xxg': 'indel', 'xxc': 'indel', 'xxt': 'indel', 'xxx': 'indel'} ''' # commented this part out since its hard coding indels(?)
+
+	result = lookup.get(codon.lower(), "?") # get codon from lookup dictionary and default: "?" if not in lookup
+	return result
 
 # translate DNA -> amino acid
 def translate_sequence(seq):
