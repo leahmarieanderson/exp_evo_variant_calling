@@ -84,6 +84,11 @@ Now your directory tree should something like this:
     └── outputs
 ```
 ## Usage
+We have two main steps in our pipeline:
+1. Align the ancestor strain and process its bam and vcf files.
+2. Align and annotate the evolved strain's variants and put the results into comprehensive output files 
+
+### Align Ancestor strain
 First, we need to create the bam files as well as the samtools and freebayes vcfs for our ancestor fastq files.   
 So, we need to get on the cluster. We can do so by running this command
 ```php
@@ -120,7 +125,7 @@ For example, given this directory tree, here's what the code should look like:
     ├── fastq
     ├── genomes
     └── outputs
------------------------------------------------------------------
+-----------------------script below--------------------------------------
 #!/bin/bash
 #$ -S /bin/bash
 #$ -wd path/to/experiment1
@@ -140,7 +145,7 @@ Next, we want to change some of the file paths that are being used in the script
     │   ├── sacCer3.dict
     │   └── ...
     └── outputs
------------------------------------------------------------------
+-----------------------script below--------------------------------------
 FOLDER=fastq
 ANC=$1
 DIR=path/to/experiment1 (CHANGE THIS to be the same as the -wd line from before)
@@ -152,23 +157,111 @@ REF=${DIR}/genomes/sacCer3.fasta # Reference genome (CHANGE THIS sacCer3.fasta t
 Now you can exit from your text editor and we can move on to submitting your job. Remember to save your changes before you exit!  
 
 
-Next, you would want to submit a job for aligning your ancestor. You can do this by using `qsub` with our align_ANC.sh script.  
+Next, you would want to submit a job for aligning your ancestor. You can do this by using `qsub` with our `align_ANC.sh` script.  
 This is an example fastq directory. Note that `anc_AB_R1_001.fastq.gz` and `anc_AB_R2_001.fastq.gz` are our ancestor fastq files.
 ```bash
 ├── fastq
-    │   ├── anc_AB_R1_001.fastq.gz
-    │   ├── anc_AB_R2_001.fastq.gz
-    │   ├── sample1_R1_001.fastq.gz
-    │   ├── sample1_R2_001.fastq.gz
-    │   ├── sample2_R1_001.fastq.gz
-    │   └── sample2_R2_001.fastq.gz
+        ├── anc_AB_R1_001.fastq.gz
+        ├── anc_AB_R2_001.fastq.gz
+        ├── sample1_R1_001.fastq.gz
+        ├── sample1_R2_001.fastq.gz
+        ├── sample2_R1_001.fastq.gz
+        └── sample2_R2_001.fastq.gz
 ```
 We just want to use the prefix before `_R1_001.fastq.gz` as our argument.
 So we would want to use this command to submit a job to align our ancestor.
 ```php
 qsub align_ANC.sh anc_AB
 ```
-The script will automatically check the `fastq` directory for a name that matches what we give it and use those fastqs for our bams and vcfs.
+The script will automatically check the `fastq` directory for a name that matches what we give it and use those fastqs for our bams and vcfs.  
+After you finished qsub-ing, you can check on the status of your job by using the `qstat -u username` command in the terminal.  
 
+After the job has finished running, you should have a new directory called `WorkDirectory` and your directory tree should look like:
+```bash
+└── experiment1
+    ├── errors
+    ├── exp_evo_variant_calling
+    ├── fastq
+    ├── genomes
+    ├── outputs
+    └── WorkDirectory
+        └── anc_AB
+            ├── dup_metrics
+            ├── anc_AB_comb_R1R2.RG.MD.realign.sort.bam
+            ├── anc_AB_comb_R1R2.RG.MD.realign.sort.bam.bai
+            ├── anc_AB_comb_freebayes_BCBio.vcf
+            └── anc_AB_samtools_AB.vcf
+```
+### Align and Annotate Evolved Sample
+Now we want to align and annotate the evolved sample. We have two methods of doing this. 
+#### Individual job submissions
+Similarly to what we did for our `align_ANC.sh` script, we will need to `nano` or `vim` into an align script of your choice and change the respective bash variables and script variables. 
+In our example, we will choose the `align.sh` script. So we will type the command:
+```php
+vim align.sh
+OR
+nano align.sh
+```
+As an example, given this directory tree, we will change our script accordingly.  
+```bash
+└── experiment1
+    ├── errors
+    ├── exp_evo_variant_calling
+    ├── fastq
+        ├── anc_AB_R1_001.fastq.gz
+        ├── anc_AB_R2_001.fastq.gz
+        ├── sample1_R1_001.fastq.gz (THIS IS OUR EVOLVED STRAIN TO ALIGN)
+        ├── sample1_R2_001.fastq.gz (THIS IS OUR EVOLVED STRAIN TO ALIGN)
+        ├── sample2_R1_001.fastq.gz
+        └── sample2_R2_001.fastq.gz
+    ├── genomes
+    ├── outputs
+    └── WorkDirectory
+-----------------------script below--------------------------------------
+#!/bin/bash
+#$ -S /bin/bash
+#$ -wd path/to/experiment1 (CHANGE THIS)
+#$ -o path/to/experiment1/outputs (CHANGE THIS)
+#$ -e path/to/experiment1/errors (CHANGE THIS)
+#$ -l mfree=8G
+#$ -l h_rt=36:0:0
+#$ -N sample1 (CHANGE THIS)
+```
+We will only need to change the `-wd`, `o`, `-e`, and `-N` to appropriately named paths and names. (`-N` is simply the name of the job when we submit)  
+After this, we will need to change the script variables.
+```php
+FOLDER=fastq
+SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
+ANC=$2
+DIR=/path/to/experiment1 (CHANGE THIS)
+WORKDIR=${DIR}/WorkDirectory # Where files will be created
+SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
+SEQID=experiment1 # Project name and date for bam header (CHANGE THIS)
+REF=${DIR}/genomes/sacCer3.fasta # Reference genome (CHANGE THIS IF NOT YOUR REFERENCE GENOME)
+ANNOTATE=${DIR}/genomes # Location of custom annotation scripts
+SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
+ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
+VCFDIR=${WORKDIR}/${ANC}/
+```
+You'll only need to change the `DIR`, `SEQID`, and possibly `REF` if you have a different reference genome.  
+Lastly, just like how we did a job submission with `align_ANC.sh`, we will do the same thing with our `align.sh` script.  
+This command is a little different than our align_ANC.sh qsub but with one additional argument. It's the same as before with the format  
+`qsub align_script evolved_name ancestor_name`
+So with our example from before: 
+```bash
+├── fastq
+        ├── anc_AB_R1_001.fastq.gz (Ancestor name: anc_AB)
+        ├── anc_AB_R2_001.fastq.gz
+        ├── sample1_R1_001.fastq.gz (Evolved strain name: sample1)
+        ├── sample1_R2_001.fastq.gz 
+        ├── sample2_R1_001.fastq.gz
+        └── sample2_R2_001.fastq.gz
+```
+Our command would be:
+```php
+qsub align.sh sample1 anc_AB
+```
+After that, you can check on your job status by using `qstat -u username`.
+### Batch submit
 
 
