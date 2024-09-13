@@ -90,6 +90,11 @@ We have two main steps in our pipeline:
 2. Align and annotate the evolved strain's variants and put the results into comprehensive output files 
 
 ### Align Ancestor strain
+We have two main steps in our pipeline:
+1. Align the ancestor strain and process its bam and vcf files.
+2. Align and annotate the evolved strain's variants and put the results into comprehensive output files 
+
+### Align Ancestor strain
 First, we need to create the bam files as well as the samtools and freebayes vcfs for our ancestor fastq files.   
 So, we need to get on the cluster. We can do so by running this command
 ```php
@@ -127,6 +132,7 @@ For example, given this directory tree, here's what the code should look like:
     ├── genomes
     └── outputs
 -----------------------script below--------------------------------------
+-----------------------script below--------------------------------------
 #!/bin/bash
 #$ -S /bin/bash
 #$ -wd path/to/experiment1
@@ -147,6 +153,7 @@ Next, we want to change some of the file paths that are being used in the script
     │   └── ...
     └── outputs
 -----------------------script below--------------------------------------
+-----------------------script below--------------------------------------
 FOLDER=fastq
 ANC=$1
 DIR=path/to/experiment1 (CHANGE THIS to be the same as the -wd line from before)
@@ -159,9 +166,16 @@ Now you can exit from your text editor and we can move on to submitting your job
 
 
 Next, you would want to submit a job for aligning your ancestor. You can do this by using `qsub` with our `align_ANC.sh` script.  
+Next, you would want to submit a job for aligning your ancestor. You can do this by using `qsub` with our `align_ANC.sh` script.  
 This is an example fastq directory. Note that `anc_AB_R1_001.fastq.gz` and `anc_AB_R2_001.fastq.gz` are our ancestor fastq files.
 ```bash
 ├── fastq
+        ├── anc_AB_R1_001.fastq.gz
+        ├── anc_AB_R2_001.fastq.gz
+        ├── sample1_R1_001.fastq.gz
+        ├── sample1_R2_001.fastq.gz
+        ├── sample2_R1_001.fastq.gz
+        └── sample2_R2_001.fastq.gz
         ├── anc_AB_R1_001.fastq.gz
         ├── anc_AB_R2_001.fastq.gz
         ├── sample1_R1_001.fastq.gz
