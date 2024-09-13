@@ -278,7 +278,6 @@ def main():
     print(f"Script '{script_name}' updated.")
 
     fastq_dir = DIR_option[4:] + "/" + FOLDER_option[7:] + "/"
-    print(fastq_dir)
     # prompts user if they want to qsub all samples(except ancestor) in their ${DIR}/${FOLDER} i.e. your fastq folder
     user_submit = input(f"Would you like to qsub all samples in {fastq_dir} ? (y/n) : ")
     if user_submit.lower() == 'y':

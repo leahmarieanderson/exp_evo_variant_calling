@@ -5,10 +5,7 @@
 #$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
-#$ -N
-
-#set -e
-#set -u
+#$ -N 
 
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
@@ -39,7 +36,7 @@ SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SEQID=leah_freeze_evolution # Project name and date for bam header
 REF=${DIR}/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${DIR}/genomes # Location of custom annotation scripts
-SCRIPTS=/net/dunham/vol2/Zilong/updating_pipeline_2024/exp_evo_variant_calling # Path of annotation_final.py directory
+SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
 VCFDIR=${WORKDIR}/${ANC}/
 
@@ -157,17 +154,8 @@ bedtools intersect -v -header \
         -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
         > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf
 
-# After filtering ancestor out, intersect all ancestor-filtered vcfs
-bedtools intersect -header \
-        -a ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf \
-        -b ${SAMPLE}_samtools_AB_AncFiltered.vcf \
-        > ${SAMPLE}_FB_ST_AncFilt.vcf
 
-bedtools intersect -header \
-        -a ${SAMPLE}_FB_ST_AncFilt.vcf \
-        -b ${SAMPLE}_lofreq_AncFiltered.vcf \
-        > ${SAMPLE}_final_AncFilt.vcf
-
+# Annotate the AncFiltered
 (>2 echo ***Annotate***)
 python3 ${SCRIPTS}/annotation_final.py \
         -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf \
@@ -187,11 +175,6 @@ python3 ${SCRIPTS}/annotation_final.py \
         -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
         -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
-python3 ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_final_AncFilt.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
 # Many filtering steps
 # MQ or MQM = Mapping quality
@@ -199,40 +182,11 @@ python3 ${SCRIPTS}/annotation_final.py \
 # DP = Read depth
 # DP[x] or SAF,SAR,SRF,SRR = Array with read depth for Fwd, Rev, and from which strand
 # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
-(>2 echo ***BCFtools - Filter***)
-bcftools filter -O v -o ${SAMPLE}_samtools_stringent.vcf \
-        -i 'MQ>30 & QUAL>75 & DP>10 & (DP4[2]+DP4[3])>4 & (DP4[2]+DP4[3])/DP>0.3 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
-        ${SAMPLE}_samtools_AB_AncFiltered.vcf
 
-#Chris recommended a 40x coverage cutoff, but some of my samples are low coverage so I switched it to 10 for now.
-bcftools filter -O v -o ${SAMPLE}_freebayes_stringent.vcf \
-        -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>40 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
-        ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
+(>2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
 
-bcftools filter -O v -o ${SAMPLE}_lofreq_stringent.vcf \
-       -i 'QUAL>20 & DP>20 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
-       ${SAMPLE}_lofreq_AncFiltered.vcf
-
-
-# intersect freebayes by samtools to create final vcf to annotate
-bedtools intersect -wao -header \
-        -a ${SAMPLE}_freebayes_stringent.vcf \
-        -b ${SAMPLE}_samtools_stringent.vcf \
-        > ${SAMPLE}_FB_ST_stringent.vcf
-
-# intersect samtools by freebayes to create final vcf to annotate
-bedtools intersect -wao -header \
-        -a ${SAMPLE}_lofreq_stringent.vcf \
-        -b ${SAMPLE}_FB_ST_stringent.vcf \
-        > ${SAMPLE}_final_stringent.vcf
-
-# Uses custom annotation script to put ORFs, tRNA, and ect. on the vcfs
-(>2 echo ***Annotate***)
-python3 ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_final_stringent.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+# After, we would like to create a csv with just the necessary information
+python3 ${SCRIPTS}/stringent_filter.py ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
 
 # Remove intermediates
 rm ${SAMPLE}_comb_R1R2.bam.intervals
@@ -284,24 +238,19 @@ mkdir intermediate_vcfs
 
 # move files into directories
 
-mv ${SAMPLE}_final_stringent_annotated_vcf.txt results
+mv ${SAMPLE}_final_stringent_compiled.csv results
 mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt results
 mv ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt results
 mv ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt results
-mv ${SAMPLE}_final_AncFilt_annotated_vcf.txt results
+mv ${SAMPLE}_samtools_AB_AncFiltered_condensed.csv results
+mv ${SAMPLE}_freebayes_BCBio_AncFiltered_condensed.csv results
+mv ${SAMPLE}_lofreq_AncFiltered_condensed.csv results
 
 mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam bams
 mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam.bai bams
 
-mv ${SAMPLE}_samtools_stringent.vcf intermediate_vcfs
 mv ${SAMPLE}_samtools_AB_AncFiltered.vcf intermediate_vcfs
 mv ${SAMPLE}_samtools_AB.vcf intermediate_vcfs
-mv ${SAMPLE}_final_stringent.vcf intermediate_vcfs
 mv ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf intermediate_vcfs
 mv ${SAMPLE}_freebayes_BCBio.vcf intermediate_vcfs
-mv ${SAMPLE}_freebayes_stringent.vcf intermediate_vcfs
 mv ${SAMPLE}_lofreq_AncFiltered.vcf intermediate_vcfs
-mv ${SAMPLE}_lofreq_stringent.vcf intermediate_vcfs
-mv ${SAMPLE}_FB_ST_stringent.vcf intermediate_vcfs
-mv ${SAMPLE}_FB_ST_AncFilt.vcf intermediate_vcfs
-mv ${SAMPLE}_final_AncFilt.vcf intermediate_vcfs

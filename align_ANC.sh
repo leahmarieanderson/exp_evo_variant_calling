@@ -6,9 +6,6 @@
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
-#set -e
-#set -u
-
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
 ## Uses the recommended SNP calling pipeline from Samtools
