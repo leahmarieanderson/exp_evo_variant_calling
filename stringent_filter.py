@@ -252,6 +252,14 @@ def filter_vcf(input_file):
     # return name of converted file
     return csv_name
 
+# helper function to isolate sample name from file name
+def find_second_underscore(s):
+    first_index = s.find('_')
+    if first_index == -1:
+        return -1  # No underscores found
+    second_index = s.find('_', first_index + 1)
+    return second_index
+
 # function that helps convert CHROM column strings to ints for sorting
 def chromosome_conversion(chrom_number):
 	chrom_conv = {'I':1, 'II':2, 'III':3, 'IV':4, 'V':5, 'VI':6, 'VII':7, 'VIII':8, 'IX':9, 'X':10, 
@@ -307,7 +315,10 @@ def main(all_file_names):
                     else:
                         row_and_dupe_count[row_tuple] = 1
 
-    temp = converted_files[0].replace('_condensed.csv', 'all_condensed.csv') # make a temp csv file that we will sort later
+    sample_name_end_index = find_second_underscore(converted_files[0])
+    sample_name = converted_files[0][:sample_name_end_index]
+
+    temp = sample_name + '_all_condensed.csv' # make a temp csv file name
 
     # Open the output file in write mode
     with open(temp, 'w', newline='') as outfile:
@@ -338,8 +349,7 @@ def main(all_file_names):
     if os.path.exists(temp):
         os.remove(temp)
 
-    sample_name = temp.replace()
-    print("Combined CSV saved to " + sample_name + "final_stringent_compiled.csv")
+    print("Combined CSV saved to " + sample_name + "_final_stringent_compiled.csv")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Combine multiple CSV files into one.")
