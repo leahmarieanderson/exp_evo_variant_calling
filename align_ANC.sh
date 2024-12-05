@@ -130,3 +130,8 @@ rm ${ANC}_R1R2_sort.bam
 rm ${ANC}_R1R2_sort.bam.bai
 rm ${ANC}_comb_R1R2.RG.MD.sort.bam
 rm ${ANC}_comb_R1R2.RG.MD.sort.bam.bai
+
+mkdir bams
+
+mv ${ANC}_comb_R1R2.RG.MD.realign.sort.bam bams
+mv ${ANC}_comb_R1R2.RG.MD.realign.sort.bam.bai bams

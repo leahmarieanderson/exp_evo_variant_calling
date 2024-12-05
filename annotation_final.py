@@ -167,7 +167,7 @@ def main(vcf, orfs, noncoding_file, genome_file):
 											print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
 									else:
 										# NICOLE'S CHANGES: fixed below syntax
-										print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
+										print('\t'.join(l + ['synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
 						
 							annotation = True
 							print ('Crick')
@@ -236,7 +236,7 @@ def main(vcf, orfs, noncoding_file, genome_file):
 											print('\t'.join(l + ['missense', genes[g][0], wt_aa + str(int(codon /3+1)) + mut_aa]), file=f_out)
 									else:
 										# NICOLE'S CHANGES: below line is the updated python 3 syntax
-										print('\t'.join(l + ['coding-synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
+										print('\t'.join(l + ['synonymous', genes[g][0], wt_aa + str(int(codon/3+1)) + mut_aa]), file=f_out)
 
 									annotation = True
 									print ('watson')
