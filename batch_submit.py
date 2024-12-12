@@ -3,6 +3,10 @@ import glob
 import subprocess
 import sys
 
+exp_evo_path = os.path.dirname(os.path.realpath(__file__)) # this is our current directory
+
+work_dir_path = os.path.dirname(exp_evo_path) # this is the work directory we will put for the bash -wd directive 
+
 def find_second_underscore(s):
     first_index = s.find('_')
     if first_index == -1:
@@ -68,17 +72,16 @@ def get_sample_names(directory):
 def multi_qsub(script_name, directory, ancestor_name):
     # directory should be the path to your fastq directory
     samples = get_sample_names(directory)
-   
+    
+    # check if the ancestor name is even in the directory
+    if ancestor_name not in samples:
+        print(ancestor_name, " not found in ", directory, ". Exiting Program...")
+        sys.exit(1)
+
     # Submit a job for each file
     for sample_name in samples:
         if sample_name != ancestor_name: # only qsub for with the samples, not ancestor
             submit_job(script_name, sample_name, ancestor_name)
-
-def print_bash_settings(bash_settings):
-    # Print all bash_settings
-    print("\nCurrent Bash Settings:")
-    for setting in bash_settings:
-        print(setting)
 
 def print_script_var(script_vars):
     # Print all script_variables
@@ -113,27 +116,6 @@ def remove_last_var(s):
     
     # Return the string up to the last whitespace
     return s[:index + 1]
-
-def remove_line_marker(arr):
-    new_arr = []
-    for s in arr:
-
-        # Strip the string of leading and trailing whitespace
-        s = s.strip()
-        
-        # Find the position of the first right bracket
-        index = s.find(']')
-
-        comment_index = s.find('#')
-
-        if index == -1:
-            raise RuntimeError("unable to find line marker to remove. Crashing Program.")
-        
-        if comment_index > 5: #removes real comment, reminder that the string looks like '[1] #$ -S /bin/bash' so we have to check after the 5th character
-            new_arr.append(s[index + 2:comment_index])
-        else: # there are no comments or there are '#' at the beginning like with bash code
-            new_arr.append(s[index + 2:])
-    return new_arr
     
 def find_index_of_substring(strings, substring):
     for index, s in enumerate(strings):
@@ -142,6 +124,7 @@ def find_index_of_substring(strings, substring):
     return -1  # Return -1 if the substring is not found
 
 def main():
+
     # CHANGE THIS TO YOUR ALIGN SCRIPT
     script_name = 'align.sh'
     
@@ -150,66 +133,94 @@ def main():
         script_lines = script.readlines()
 
     # Initialize lists and counters
+    auto_gen_bash_settings = []
+    auto_gen_script_vars = []
     bash_settings = []
     script_variables = []
-    bash_line_num = 0
-    script_var_line_num = 0
 
     # Iterate through script_lines and categorize lines
     for line in script_lines:
+        # form an array of the currenty job directives in the script
         if line.startswith("#$ -"):
             if(not line.startswith("#$ -N")):
-                bash_settings.append(f"[{bash_line_num}] {line}")
-                bash_line_num += 1
+                bash_settings.append(line)
+        # form an array of the current script variables 
         elif line.startswith("FOLDER="):
-            script_variables.append(f"[{script_var_line_num}] {line}")
-            script_var_line_num += 1
+            script_variables.append(line.strip())
         elif line.startswith("DIR="):
-            script_variables.append(f"[{script_var_line_num}] {line}")
-            script_var_line_num += 1
+            script_variables.append(line.strip())
         elif line.startswith("SEQID="):
-            script_variables.append(f"[{script_var_line_num}] {line}")
-            script_var_line_num += 1
+            script_variables.append(line.strip())
         elif line.startswith("REF="):
-            script_variables.append(f"[{script_var_line_num}] {line}")
-            script_var_line_num += 1
+            script_variables.append(line.strip())
         elif line.startswith("SCRIPTS="):
-            script_variables.append(f"[{script_var_line_num}] {line}")
-            script_var_line_num += 1
+            script_variables.append(line.strip())
     
-    # allow user to change bash settings
-    print_bash_settings(bash_settings)
-    while True:
-        user_input = input("Enter the number of the line to change (type 'c' to finish changes): ")
-        if user_input.lower() == 'c':
-            print_bash_settings(bash_settings)
-            break
-        elif user_input.isdigit() and int(user_input) < bash_line_num:
-            user_changes = input("What would you like to change this to? : ").replace(" ","") # get input and remove whitespaces from input
-            if(bash_settings[int(user_input)].find('=') == -1): # no equals character so we replace word after last whitespace
-                bash_settings[int(user_input)] = remove_last_word(bash_settings[int(user_input)]) + user_changes 
-            else: # there is an equals so we have to replace word after equals 
-                bash_settings[int(user_input)] = remove_last_var(bash_settings[int(user_input)]) + user_changes 
-            print_bash_settings(bash_settings)
-        else:
-            print("This is not a valid number")
+    # auto generate the bash settings (SGE Directives) using what we know about our own file structure.
+    auto_gen_bash_settings.append("#$ -S /bin/bash\n")
+    auto_gen_bash_settings.append(f"#$ -wd {work_dir_path}\n")
+    auto_gen_bash_settings.append(f"#$ -o {work_dir_path}/outputs/\n")
+    auto_gen_bash_settings.append(f"#$ -e {work_dir_path}/errors/\n")
+    auto_gen_bash_settings.append("#$ -l mfree=8G\n")
+    auto_gen_bash_settings.append("#$ -l h_rt=36:0:0\n")
+
+    # check current bash settings to our auto generated bash settings
+    # if different, then prompt users to keep old settings or auto generated one. 
+    if set(bash_settings) != set(auto_gen_bash_settings):
+        # print current bash settings in script
+        print("\nCurrent Bash Settings for scripts:")
+        for setting in bash_settings:
+            print(setting)
+        # print new bash settings that use your directories
+        print("\n**NEW** Bash Settings for scripts:")
+        for setting in auto_gen_bash_settings:
+            print(setting)
+        # prompt user to either use the new settings that are auto generated
+        while True:
+            user_input = input("Change your SGE Directives to fit your directories? (y/n) : ")
+            if user_input.lower() == 'y':
+                bash_settings = auto_gen_bash_settings
+                break
+            elif user_input.lower() == 'n':
+                # just keep our current SGE directives and continue
+                break
+            else: 
+                print("This is not a valid answer")
+    
+    # else the SGE Directives are the same so we just ignore and continue forward     
 
     print_script_var(script_variables)
-    while True:
-        user_input = input("Enter the number of the line to change (type 'c' to finish changes): ")
-        if user_input.lower() == 'c':
-            print_script_var(script_variables)
-            break
-        elif user_input.isdigit() and int(user_input) < script_var_line_num: # script variables always have equals character
-            user_changes = input("What would you like to change this to? : ").replace(" ","") # get input and remove whitespaces from input
-            
-            script_variables[int(user_input)] = remove_last_var(script_variables[int(user_input)]) + user_changes 
-            print_script_var(script_variables)
-        else:
-            print("This is not a valid number")
 
-    bash_settings = remove_line_marker(bash_settings)
-    script_variables = remove_line_marker(script_variables)
+    auto_gen_script_vars.append("FOLDER=fastq")
+    auto_gen_script_vars.append(f"DIR={work_dir_path}")
+    # Prompt user for what they want the SEQID to be
+    user_input_SEQID = input("What would you like your SEQID to be? (this could be your project name): ")
+    auto_gen_script_vars.append(f"SEQID={user_input_SEQID} # Project name and date for bam header")
+    auto_gen_script_vars.append("REF=${DIR}/genomes/sacCer3.fasta # Reference genome")
+    auto_gen_script_vars.append("SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory")
+
+    if set(script_variables) != set(auto_gen_script_vars):
+        # print current bash settings in script
+        print("\nCurrent Variables Settings for scripts:")
+        for variable in script_variables:
+            print(variable)
+        # print new bash settings that use your directories
+        print("\n**NEW** Variables Settings for scripts:")
+        for variable in auto_gen_script_vars:
+            print(variable)
+        # prompt user to either use the new settings that are auto generated
+        while True:
+            user_input = input("Change your variable paths to fit your directories? (y/n) : ")
+            if user_input.lower() == 'y':
+                script_variables = auto_gen_script_vars
+                break
+            elif user_input.lower() == 'n':
+                # just keep our current script variables and continue
+                break
+            else: 
+                print("This is not a valid answer")
+
+
 
     # get index of each options from the arrays bash_settings and script variables
     shell_index = find_index_of_substring(bash_settings, ('#$ -S'))
@@ -263,11 +274,11 @@ def main():
         elif line.startswith("DIR="):
             updated_lines.append(f"{DIR_option}\n")
         elif line.startswith("SEQID="):
-            updated_lines.append(f"{SEQID_option} # Project name and date for bam header\n")
+            updated_lines.append(f"{SEQID_option}\n")
         elif line.startswith("REF="):
-            updated_lines.append(f"{REF_option} # Reference genome\n")
+            updated_lines.append(f"{REF_option}\n")
         elif line.startswith("SCRIPTS="):
-            updated_lines.append(f"{SCRIPTS_option} # Path of annotation_final.py directory\n")
+            updated_lines.append(f"{SCRIPTS_option}\n")
         else:
             updated_lines.append(line)
 
