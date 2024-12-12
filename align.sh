@@ -126,67 +126,118 @@ freebayes -f ${REF} \
         --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
         ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
-(>&2 echo ***LoFreq - Somatic***)
-lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
-       -o ${SAMPLE}_lofreq_
+# Requires ANC from this line down
+# check if ANC argument was given. If there is, then continue with Ancestor filtering 
+if [-n $2]; then 
+        (>&2 echo ***LoFreq - Somatic***)
+        lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
+        -o ${SAMPLE}_lofreq_
 
-# Unzips lofreq vcfs
-bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
-bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
-bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
+        # Unzips lofreq vcfs
+        bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
+        bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
+        bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
 
-# Filters samtools by ancestor
-(>2 echo ***Bedtools - Intersect***)
-bedtools intersect -v -header \
-        -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB.vcf \
-        -b ${VCFDIR}/${ANC}_samtools_AB.vcf \
-        > ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf
+        # Filters samtools by ancestor
+        (>2 echo ***Bedtools - Intersect***)
+        bedtools intersect -v -header \
+                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB.vcf \
+                -b ${VCFDIR}/${ANC}_samtools_AB.vcf \
+                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf
 
-# Filters freebayes by ancestor 
-bedtools intersect -v -header \
-        -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
-        -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
-        > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
+        # Filters freebayes by ancestor 
+        bedtools intersect -v -header \
+                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
+                -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
+                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
-# Filters lofreq by ancestor
-bedtools intersect -v -header \
-        -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
-        -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
-        > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf
-
-
-# Annotate the AncFiltered
-(>2 echo ***Annotate***)
-python3 ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-python3 ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
-
-python3 ${SCRIPTS}/annotation_final.py \
-        -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf \
-        -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-        -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-        -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+        # Filters lofreq by ancestor
+        bedtools intersect -v -header \
+                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
+                -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
+                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf
 
 
-# Many filtering steps
-# MQ or MQM = Mapping quality
-# QUAL = Metric that is specific for the variant caller that denotes confidence
-# DP = Read depth
-# DP[x] or SAF,SAR,SRF,SRR = Array with read depth for Fwd, Rev, and from which strand
-# Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
+        # Annotate the AncFiltered
+        (>2 echo ***Annotate***)
+        python3 ${SCRIPTS}/annotation_final.py \
+                -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf \
+                -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+                -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+                -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
-(>2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
+        python3 ${SCRIPTS}/annotation_final.py \
+                -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf \
+                -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+                -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+                -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
-# After, we would like to create a csv with just the necessary information
-python3 ${SCRIPTS}/stringent_filter.py ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
+        python3 ${SCRIPTS}/annotation_final.py \
+                -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf \
+                -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+                -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+                -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+
+
+        # Many filtering steps
+        # MQ or MQM = Mapping quality
+        # QUAL = Metric that is specific for the variant caller that denotes confidence
+        # DP = Read depth
+        # DP[x] or SAF,SAR,SRF,SRR = Array with read depth for Fwd, Rev, and from which strand
+        # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
+
+        (>2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
+
+        # After, we would like to create a csv with just the necessary information
+        python3 ${SCRIPTS}/stringent_filter.py ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
+
+        # remove all the lofreq intermediate files
+        rm ${SAMPLE}_lofreq_normal_relaxed.log
+        rm ${SAMPLE}_lofreq_normal_relaxed.vcf
+        rm ${SAMPLE}_lofreq_normal_relaxed.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz
+        rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz
+        rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz
+        rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf
+        rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz
+        rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz
+        rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_tumor_relaxed.log
+        rm ${SAMPLE}_lofreq_tumor_relaxed.vcf
+        rm ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz
+        rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz.tbi
+        rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz
+        rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz.tbi
+
+        # make directories and organize files
+        cd ${WORKDIR}/${SAMPLE}
+
+        mkdir results
+
+        mkdir intermediate_vcfs  
+
+        # move files into directories
+
+        mv ${SAMPLE}_final_stringent_compiled.csv results
+        mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt results
+        mv ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt results
+        mv ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt results
+        mv ${SAMPLE}_samtools_AB_AncFiltered_condensed.csv results
+        mv ${SAMPLE}_freebayes_BCBio_AncFiltered_condensed.csv results
+        mv ${SAMPLE}_lofreq_AncFiltered_condensed.csv results
+
+        mv ${SAMPLE}_samtools_AB_AncFiltered.vcf intermediate_vcfs
+        mv ${SAMPLE}_samtools_AB.vcf intermediate_vcfs
+        mv ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf intermediate_vcfs
+        mv ${SAMPLE}_freebayes_BCBio.vcf intermediate_vcfs
+        mv ${SAMPLE}_lofreq_AncFiltered.vcf intermediate_vcfs
+fi 
 
 # Remove intermediates
 rm ${SAMPLE}_comb_R1R2.bam.intervals
@@ -202,55 +253,9 @@ rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
 # remove some random files were somehow produced by the script (Not sure how it was produced)
 # there is some file called 2 that was created. 
 rm 2
-
-# remove all the lofreq intermediate files
-rm ${SAMPLE}_lofreq_normal_relaxed.log
-rm ${SAMPLE}_lofreq_normal_relaxed.vcf
-rm ${SAMPLE}_lofreq_normal_relaxed.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz
-rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz
-rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz
-rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf
-rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz
-rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz
-rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_tumor_relaxed.log
-rm ${SAMPLE}_lofreq_tumor_relaxed.vcf
-rm ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz
-rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz.tbi
-rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz
-rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz.tbi
-
-# make directories and organize files
-cd ${WORKDIR}/${SAMPLE}
-
-mkdir results
+rm temp.txt
 
 mkdir bams
 
-mkdir intermediate_vcfs  
-
-# move files into directories
-
-mv ${SAMPLE}_final_stringent_compiled.csv results
-mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt results
-mv ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt results
-mv ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt results
-mv ${SAMPLE}_samtools_AB_AncFiltered_condensed.csv results
-mv ${SAMPLE}_freebayes_BCBio_AncFiltered_condensed.csv results
-mv ${SAMPLE}_lofreq_AncFiltered_condensed.csv results
-
 mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam bams
 mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam.bai bams
-
-mv ${SAMPLE}_samtools_AB_AncFiltered.vcf intermediate_vcfs
-mv ${SAMPLE}_samtools_AB.vcf intermediate_vcfs
-mv ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf intermediate_vcfs
-mv ${SAMPLE}_freebayes_BCBio.vcf intermediate_vcfs
-mv ${SAMPLE}_lofreq_AncFiltered.vcf intermediate_vcfs
