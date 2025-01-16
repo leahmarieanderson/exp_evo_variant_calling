@@ -128,7 +128,7 @@ freebayes -f ${REF} \
 
 # Requires ANC from this line down
 # check if ANC argument was given. If there is, then continue with Ancestor filtering 
-if [-n $2]; then 
+if [-n "$2"]; then 
         (>&2 echo ***LoFreq - Somatic***)
         lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
         -o ${SAMPLE}_lofreq_
