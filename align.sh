@@ -1,11 +1,11 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
-#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
-#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
+#$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024/
+#$ -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
+#$ -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
-#$ -N 
+#$ -N leah_test250122
 
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
@@ -30,7 +30,7 @@ module load freebayes/1.3.6
 FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
+DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024/
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SEQID=leah_freeze_evolution # Project name and date for bam header
@@ -128,7 +128,7 @@ freebayes -f ${REF} \
 
 # Requires ANC from this line down
 # check if ANC argument was given. If there is, then continue with Ancestor filtering 
-if [-n "$2"]; then 
+if [ -n "$2" ]; then 
         (>&2 echo ***LoFreq - Somatic***)
         lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
         -o ${SAMPLE}_lofreq_

@@ -1,0 +1,160 @@
+***BWA - mem -R***
+[E::bwa_idx_load_from_disk] fail to locate the index files
+***Samtools - View***
+[main_samview] fail to read the header from "RBcaff_5pink2_S19_R1R2.sam".
+***Samtools - Sort***
+[E::hts_open_format] Failed to open file "RBcaff_5pink2_S19_R1R2.bam" : No such file or directory
+samtools sort: can't open "RBcaff_5pink2_S19_R1R2.bam": No such file or directory
+***Samtools - Index***
+[E::hts_open_format] Failed to open file "RBcaff_5pink2_S19_R1R2_sort.bam" : No such file or directory
+samtools index: failed to open "RBcaff_5pink2_S19_R1R2_sort.bam": No such file or directory
+***Samtools - Flagstat***
+[E::hts_open_format] Failed to open file "/net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/WorkDirectory/RBcaff_5pink2_S19/RBcaff_5pink2_S19_R1R2_sort.bam" : No such file or directory
+samtools flagstat: Cannot open input file "/net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/WorkDirectory/RBcaff_5pink2_S19/RBcaff_5pink2_S19_R1R2_sort.bam": No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_R1R2.bam': No such file or directory
+***Picard - MarkDuplicates***
+INFO	2025-01-15 19:53:25	MarkDuplicates	
+
+********** NOTE: Picard's command line syntax is changing.
+**********
+********** For more information, please see:
+********** 
+https://github.com/broadinstitute/picard/wiki/Command-Line-Syntax-Transition-For-Users-(Pre-Transition)
+**********
+********** The command line looks like this in the new syntax:
+**********
+**********    MarkDuplicates -INPUT RBcaff_5pink2_S19_R1R2_sort.bam -OUTPUT RBcaff_5pink2_S19_comb_R1R2.MD.bam -METRICS_FILE dup_metrics/RBcaff_5pink2_S19_comb_R1R2.sort_dup_metrics -REMOVE_DUPLICATES true -VALIDATION_STRINGENCY LENIENT
+**********
+
+
+Jan 15, 2025 7:53:25 PM com.intel.gkl.NativeLibraryLoader load
+INFO: Loading libgkl_compression.so from jar:file:/net/gs/vol3/software/modules-sw/picard/3.1.1/Linux/all/x86_64/picard.jar!/com/intel/gkl/native/libgkl_compression.so
+[Wed Jan 15 19:53:25 PST 2025] MarkDuplicates INPUT=[RBcaff_5pink2_S19_R1R2_sort.bam] OUTPUT=RBcaff_5pink2_S19_comb_R1R2.MD.bam METRICS_FILE=dup_metrics/RBcaff_5pink2_S19_comb_R1R2.sort_dup_metrics REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=LENIENT    MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP=50000 MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=8000 SORTING_COLLECTION_SIZE_RATIO=0.25 TAG_DUPLICATE_SET_MEMBERS=false REMOVE_SEQUENCING_DUPLICATES=false TAGGING_POLICY=DontTag CLEAR_DT=true DUPLEX_UMI=false FLOW_MODE=false FLOW_QUALITY_SUM_STRATEGY=false USE_END_IN_UNPAIRED_READS=false USE_UNPAIRED_CLIPPED_END=false UNPAIRED_END_UNCERTAINTY=0 FLOW_SKIP_FIRST_N_FLOWS=0 FLOW_Q_IS_KNOWN_END=false FLOW_EFFECTIVE_QUALITY_THRESHOLD=15 ADD_PG_TAG_TO_READS=true ASSUME_SORTED=false DUPLICATE_SCORING_STRATEGY=SUM_OF_BASE_QUALITIES PROGRAM_RECORD_ID=MarkDuplicates PROGRAM_GROUP_NAME=MarkDuplicates READ_NAME_REGEX=<optimized capture of last three ':' separated fields as numeric values> OPTICAL_DUPLICATE_PIXEL_DISTANCE=100 MAX_OPTICAL_DUPLICATE_SET_SIZE=300000 VERBOSITY=INFO QUIET=false COMPRESSION_LEVEL=5 MAX_RECORDS_IN_RAM=500000 CREATE_INDEX=false CREATE_MD5_FILE=false USE_JDK_DEFLATER=false USE_JDK_INFLATER=false
+[Wed Jan 15 19:53:25 PST 2025] Executing as leaha3@sage002.grid.gs.washington.edu on Linux 5.15.0-118-generic amd64; OpenJDK 64-Bit Server VM 21.0.5+11-Ubuntu-1ubuntu122.04; Deflater: Intel; Inflater: Intel; Provider GCS is available; Picard version: 3.1.1
+[Wed Jan 15 19:53:25 PST 2025] picard.sam.markduplicates.MarkDuplicates done. Elapsed time: 0.01 minutes.
+Runtime.totalMemory()=129761280
+To get help, see http://broadinstitute.github.io/picard/index.html#GettingHelp
+Exception in thread "main" htsjdk.samtools.SAMException: Cannot read non-existent file: file:///net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/WorkDirectory/RBcaff_5pink2_S19/RBcaff_5pink2_S19_R1R2_sort.bam
+	at htsjdk.samtools.util.IOUtil.assertFileIsReadable(IOUtil.java:498)
+	at htsjdk.samtools.util.IOUtil.assertFileIsReadable(IOUtil.java:485)
+	at htsjdk.samtools.util.IOUtil.assertInputIsValid(IOUtil.java:461)
+	at htsjdk.samtools.util.IOUtil.assertInputsAreValid(IOUtil.java:537)
+	at picard.sam.markduplicates.MarkDuplicates.doWork(MarkDuplicates.java:257)
+	at picard.cmdline.CommandLineProgram.instanceMain(CommandLineProgram.java:280)
+	at picard.cmdline.PicardCommandLine.instanceMain(PicardCommandLine.java:105)
+	at picard.cmdline.PicardCommandLine.main(PicardCommandLine.java:115)
+***Picard - AddOrReplaceReadGroups***
+INFO	2025-01-15 19:53:26	AddOrReplaceReadGroups	
+
+********** NOTE: Picard's command line syntax is changing.
+**********
+********** For more information, please see:
+********** 
+https://github.com/broadinstitute/picard/wiki/Command-Line-Syntax-Transition-For-Users-(Pre-Transition)
+**********
+********** The command line looks like this in the new syntax:
+**********
+**********    AddOrReplaceReadGroups -I RBcaff_5pink2_S19_comb_R1R2.MD.bam -O RBcaff_5pink2_S19_comb_R1R2.RG.MD.bam -RGID leah_test -RGLB 1 -RGPU 1 -RGPL illumina -RGSM RBcaff_5pink2_S19 -VALIDATION_STRINGENCY LENIENT
+**********
+
+
+Jan 15, 2025 7:53:27 PM com.intel.gkl.NativeLibraryLoader load
+INFO: Loading libgkl_compression.so from jar:file:/net/gs/vol3/software/modules-sw/picard/3.1.1/Linux/all/x86_64/picard.jar!/com/intel/gkl/native/libgkl_compression.so
+[Wed Jan 15 19:53:27 PST 2025] AddOrReplaceReadGroups INPUT=RBcaff_5pink2_S19_comb_R1R2.MD.bam OUTPUT=RBcaff_5pink2_S19_comb_R1R2.RG.MD.bam RGID=leah_test RGLB=1 RGPL=illumina RGPU=1 RGSM=RBcaff_5pink2_S19 VALIDATION_STRINGENCY=LENIENT    VERBOSITY=INFO QUIET=false COMPRESSION_LEVEL=5 MAX_RECORDS_IN_RAM=500000 CREATE_INDEX=false CREATE_MD5_FILE=false USE_JDK_DEFLATER=false USE_JDK_INFLATER=false
+[Wed Jan 15 19:53:27 PST 2025] Executing as leaha3@sage002.grid.gs.washington.edu on Linux 5.15.0-118-generic amd64; OpenJDK 64-Bit Server VM 21.0.5+11-Ubuntu-1ubuntu122.04; Deflater: Intel; Inflater: Intel; Provider GCS is available; Picard version: 3.1.1
+[Wed Jan 15 19:53:27 PST 2025] picard.sam.AddOrReplaceReadGroups done. Elapsed time: 0.00 minutes.
+Runtime.totalMemory()=129761280
+To get help, see http://broadinstitute.github.io/picard/index.html#GettingHelp
+Exception in thread "main" htsjdk.samtools.SAMException: Cannot read non-existent file: file:///net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/WorkDirectory/RBcaff_5pink2_S19/RBcaff_5pink2_S19_comb_R1R2.MD.bam
+	at htsjdk.samtools.util.IOUtil.assertFileIsReadable(IOUtil.java:498)
+	at htsjdk.samtools.util.IOUtil.assertFileIsReadable(IOUtil.java:485)
+	at htsjdk.samtools.util.IOUtil.assertInputIsValid(IOUtil.java:461)
+	at picard.sam.AddOrReplaceReadGroups.doWork(AddOrReplaceReadGroups.java:147)
+	at picard.cmdline.CommandLineProgram.instanceMain(CommandLineProgram.java:280)
+	at picard.cmdline.PicardCommandLine.instanceMain(PicardCommandLine.java:105)
+	at picard.cmdline.PicardCommandLine.main(PicardCommandLine.java:115)
+***Samtools - Sort and Index***
+[E::hts_open_format] Failed to open file "RBcaff_5pink2_S19_comb_R1R2.RG.MD.bam" : No such file or directory
+samtools sort: can't open "RBcaff_5pink2_S19_comb_R1R2.RG.MD.bam": No such file or directory
+[E::hts_open_format] Failed to open file "RBcaff_5pink2_S19_comb_R1R2.RG.MD.sort.bam" : No such file or directory
+samtools index: failed to open "RBcaff_5pink2_S19_comb_R1R2.RG.MD.sort.bam": No such file or directory
+***GATK - RealingerTargetCreator***
+INFO  19:53:29,741 HelpFormatter - -------------------------------------------------------------------------------- 
+INFO  19:53:29,742 HelpFormatter - The Genome Analysis Toolkit (GATK) v3.7-0-gcfedb67, Compiled 2016/12/12 11:21:18 
+INFO  19:53:29,758 HelpFormatter - Copyright (c) 2010-2016 The Broad Institute 
+INFO  19:53:29,758 HelpFormatter - For support and documentation go to https://software.broadinstitute.org/gatk 
+INFO  19:53:29,759 HelpFormatter - [Wed Jan 15 19:53:29 PST 2025] Executing on Linux 5.15.0-118-generic amd64 
+INFO  19:53:29,760 HelpFormatter - OpenJDK 64-Bit Server VM 1.8.0_432-8u432-ga~us1-0ubuntu2~22.04-ga 
+INFO  19:53:29,762 HelpFormatter - Program Args: -T RealignerTargetCreator -R /net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/genomes/sacCer3.fasta -I RBcaff_5pink2_S19_comb_R1R2.RG.MD.sort.bam -o RBcaff_5pink2_S19_comb_R1R2.bam.intervals 
+INFO  19:53:29,771 HelpFormatter - Executing as leaha3@sage002.grid.gs.washington.edu on Linux 5.15.0-118-generic amd64; OpenJDK 64-Bit Server VM 1.8.0_432-8u432-ga~us1-0ubuntu2~22.04-ga. 
+INFO  19:53:29,771 HelpFormatter - Date/Time: 2025/01/15 19:53:29 
+INFO  19:53:29,771 HelpFormatter - -------------------------------------------------------------------------------- 
+INFO  19:53:29,771 HelpFormatter - -------------------------------------------------------------------------------- 
+INFO  19:53:29,776 GenomeAnalysisEngine - Strictness is SILENT 
+##### ERROR ------------------------------------------------------------------------------------------
+##### ERROR A USER ERROR has occurred (version 3.7-0-gcfedb67): 
+##### ERROR
+##### ERROR This means that one or more arguments or inputs in your command are incorrect.
+##### ERROR The error message below tells you what is the problem.
+##### ERROR
+##### ERROR If the problem is an invalid argument, please check the online documentation guide
+##### ERROR (or rerun your command with --help) to view allowable command-line arguments for this tool.
+##### ERROR
+##### ERROR Visit our website and forum for extensive documentation and answers to 
+##### ERROR commonly asked questions https://software.broadinstitute.org/gatk
+##### ERROR
+##### ERROR Please do NOT post this error to the GATK forum unless you have really tried to fix it yourself.
+##### ERROR
+##### ERROR MESSAGE: The fasta file you specified (/net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/genomes/sacCer3.fasta) does not exist.
+##### ERROR ------------------------------------------------------------------------------------------
+INFO  19:53:32,030 HelpFormatter - -------------------------------------------------------------------------------- 
+INFO  19:53:32,032 HelpFormatter - The Genome Analysis Toolkit (GATK) v3.7-0-gcfedb67, Compiled 2016/12/12 11:21:18 
+INFO  19:53:32,032 HelpFormatter - Copyright (c) 2010-2016 The Broad Institute 
+INFO  19:53:32,032 HelpFormatter - For support and documentation go to https://software.broadinstitute.org/gatk 
+INFO  19:53:32,032 HelpFormatter - [Wed Jan 15 19:53:31 PST 2025] Executing on Linux 5.15.0-118-generic amd64 
+INFO  19:53:32,032 HelpFormatter - OpenJDK 64-Bit Server VM 1.8.0_432-8u432-ga~us1-0ubuntu2~22.04-ga 
+INFO  19:53:32,035 HelpFormatter - Program Args: -T IndelRealigner -R /net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/genomes/sacCer3.fasta -I RBcaff_5pink2_S19_comb_R1R2.RG.MD.sort.bam -targetIntervals RBcaff_5pink2_S19_comb_R1R2.bam.intervals -o RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.bam 
+INFO  19:53:32,043 HelpFormatter - Executing as leaha3@sage002.grid.gs.washington.edu on Linux 5.15.0-118-generic amd64; OpenJDK 64-Bit Server VM 1.8.0_432-8u432-ga~us1-0ubuntu2~22.04-ga. 
+INFO  19:53:32,044 HelpFormatter - Date/Time: 2025/01/15 19:53:32 
+INFO  19:53:32,044 HelpFormatter - -------------------------------------------------------------------------------- 
+INFO  19:53:32,044 HelpFormatter - -------------------------------------------------------------------------------- 
+INFO  19:53:32,102 GenomeAnalysisEngine - Strictness is SILENT 
+##### ERROR ------------------------------------------------------------------------------------------
+##### ERROR A USER ERROR has occurred (version 3.7-0-gcfedb67): 
+##### ERROR
+##### ERROR This means that one or more arguments or inputs in your command are incorrect.
+##### ERROR The error message below tells you what is the problem.
+##### ERROR
+##### ERROR If the problem is an invalid argument, please check the online documentation guide
+##### ERROR (or rerun your command with --help) to view allowable command-line arguments for this tool.
+##### ERROR
+##### ERROR Visit our website and forum for extensive documentation and answers to 
+##### ERROR commonly asked questions https://software.broadinstitute.org/gatk
+##### ERROR
+##### ERROR Please do NOT post this error to the GATK forum unless you have really tried to fix it yourself.
+##### ERROR
+##### ERROR MESSAGE: The fasta file you specified (/net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/genomes/sacCer3.fasta) does not exist.
+##### ERROR ------------------------------------------------------------------------------------------
+[E::hts_open_format] Failed to open file "RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.bam" : No such file or directory
+samtools sort: can't open "RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.bam": No such file or directory
+[E::hts_open_format] Failed to open file "RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.sort.bam" : No such file or directory
+samtools index: failed to open "RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.sort.bam": No such file or directory
+***BCFtools - Pileup***
+[E::fai_build3_core] Failed to open the file /net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/genomes/sacCer3.fasta : No such file or directory
+Note: none of --samples-file, --ploidy or --ploidy-file given, assuming all sites are diploid
+Failed to read from standard input: unknown file type
+could not open /net/dunham/vol2/Leah/fixing_pipeline_april2024/exp_evo_variant_calling/genomes/sacCer3.fasta
+/var/spool/uge/sage002/job_scripts/8721837: line 131: [-n: command not found
+rm: cannot remove 'RBcaff_5pink2_S19_comb_R1R2.bam.intervals': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_comb_R1R2.MD.bam': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_comb_R1R2.RG.MD.bam': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.bam': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.bai': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_R1R2_sort.bam': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_R1R2_sort.bam.bai': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_comb_R1R2.RG.MD.sort.bam': No such file or directory
+rm: cannot remove 'RBcaff_5pink2_S19_comb_R1R2.RG.MD.sort.bam.bai': No such file or directory
+rm: cannot remove '2': No such file or directory
+rm: cannot remove 'temp.txt': No such file or directory
+mv: cannot stat 'RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.sort.bam': No such file or directory
+mv: cannot stat 'RBcaff_5pink2_S19_comb_R1R2.RG.MD.realign.sort.bam.bai': No such file or directory
