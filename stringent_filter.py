@@ -36,7 +36,7 @@ def caller_filter(caller_name, input_file, output_file):
         fieldnames = next(reader)  # Read header line
 
         # Specify the columns you want to keep
-        selected_columns = ['CHROM', 'POS', 'REF', 'ALT', 'ANNOTATION', 'REGION', 'PROTEIN']
+        selected_columns = ['CHROM', 'POS', 'REF', 'ALT', 'ANNOTATION', 'REGION', 'PROTEIN', "QUAL"]
 
         # Filter the fieldnames to keep only the selected columns
         filtered_fieldnames = [name for name in fieldnames if name in selected_columns]

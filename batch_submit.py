@@ -7,12 +7,9 @@ exp_evo_path = os.path.dirname(os.path.realpath(__file__)) # this is our current
 
 work_dir_path = os.path.dirname(exp_evo_path) # this is the work directory we will put for the bash -wd directive 
 
-def find_second_underscore(s):
-    first_index = s.find('_')
-    if first_index == -1:
-        return -1  # No underscores found
-    second_index = s.find('_', first_index + 1)
-    return second_index
+def find_second_last_underscore(s):
+    last_index = s.find('_R1_001')
+    return last_index
 
 def submit_job(script_name, sample_name, ancestor_name):
     # update script to set job name to sample_name
@@ -63,7 +60,7 @@ def get_sample_names(directory):
     for file_path in R1files:
         # Extract the sample name from the file name
         file_name = os.path.basename(file_path)
-        sample_name_end_index = find_second_underscore(file_name)
+        sample_name_end_index = find_second_last_underscore(file_name)
         sample_name = file_name[:sample_name_end_index]
         sample_name_list.append(sample_name)
 

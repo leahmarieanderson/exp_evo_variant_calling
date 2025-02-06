@@ -38,7 +38,25 @@ REF=${DIR}/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${DIR}/genomes # Location of custom annotation scripts
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam
-VCFDIR=${WORKDIR}/${ANC}/
+VCFDIR=${WORKDIR}/${ANC}
+
+# In the case where ANC argument is given incorrectly, we don't want to take an hour creating files
+# only to find out later on our code stopped working because we misspelled something or we didn't
+# provide the correct file path for ANC
+
+# Checks first if ANC name is provided in arguments
+if [ -n "$2" ]; then 
+        # Check if a file exists in the 'fastq' directory and contains ${ANC} in its name
+        if find "$DIR/$FOLDER" -type f -name "${ANC}_*" | grep -q .; then
+            (>&2 echo A fastq file with sample name ${ANC} exists in the ${FOLDER} directory.)
+        else
+            (>&2 echo No fastq file with sample name ${ANC} was found in the ${FOLDER} directory.)
+            (>&2 echo Possible misspelling of ancestor sample name or misplaced ancestor fastq file)
+            (>&2 echo 'Check your fastq folder or double check that you did not misspell :)')
+            # exit out 
+            exit 1
+        fi
+fi
 
 # Sets up folder structure
 mkdir -p ${WORKDIR}/${SAMPLE}
@@ -128,7 +146,52 @@ freebayes -f ${REF} \
 
 # Requires ANC from this line down
 # check if ANC argument was given. If there is, then continue with Ancestor filtering 
-if [-n "$2"]; then 
+if [ -n "$2" ]; then 
+        # TODO: FIX THE WAITING FOR ANC JOB TO FINISH
+
+        # Check to see if ancestor.bam does not exists
+        # if [ ! -e ${ANCBAM} ]; then
+        #     (>&2 echo ***${ANCBAM} cannot be found***)
+        #     (>&2 echo ***Creating Ancestor directory in WorkDirectory***)
+        #     # we can do a qsub align.sh ANC to create our bam files
+        #     # so we first have to cd into our align.sh directory
+        #     qsub -N ${ANC} ${SCRIPTS}/align.sh ${ANC} 
+        #     # Check job queue and wait until the job is no longer in the queue
+        #     while qstat -u $(whoami)| grep -q ${ANC}; do
+        #         (>&2 echo "Job $ANC is still running... You can check job progress under the errors directory")
+        #         sleep 60  # Wait 1 minute before checking again
+        #     done
+        # fi
+        # Go back to Work Directory
+        # Check to see if ancestor_samtools_AB_quality_filter.vcf does not exists
+        # if [ ! -e ${WORKDIR}/${ANC}/${ANC}_samtools_AB_quality_filter.vcf ]; then
+        #     (>&2 echo ***The file ${WORKDIR}/${ANC}/${ANC}_samtools_AB_quality_filter.vcf cannot be found***)
+        #     (>&2 echo ***Creating ${WORKDIR}/${ANC}/${ANC}_samtools_AB_quality_filter.vcf***)
+        #     # go to ANC directory
+        #     cd ${WORKDIR}/${ANC}
+        #     # use a quality and read depth filter on the ancestor vcfs and create filtered samtools vcf
+        #     (>&2 echo ***BCFtools - Filter - Samtools***)
+        #     bcftools filter -O v -o ${ANC}_samtools_AB_quality_filter.vcf \
+        #         -i 'MQ>30 & QUAL>75 & DP>40 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
+        #         ${ANC}_samtools_AB.vcf
+        #     # go back to sample directory
+        #     cd ${WORKDIR}/${SAMPLE}
+        # fi
+        # Check to see if ancestor_freebayes_quality_filter.vcf does not exists
+        # if [ ! -e ${WORKDIR}/${ANC}/${ANC}_freebayes_BCBio_quality_filter.vcf ]; then
+        #     (>&2 echo ***The file ${WORKDIR}/${ANC}/${ANC}_freebayes_BCBio_quality_filter.vcf cannot be found***)
+        #     (>&2 echo ***Creating ${WORKDIR}/${ANC}/${ANC}_freebayes_BCBio_quality_filter.vcf***)
+        #     # go to ANC directory
+        #     cd ${WORKDIR}/${ANC}
+        #     # use a quality and read depth filter on the ancestor vcfs and create filtered freebayes vcf
+        #     (>&2 echo ***BCFtools - Filter - Freebayes***)
+        #     bcftools filter -O v -o ${ANC}_freebayes_BCBio_quality_filter.vcf \
+        #          -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
+        #         ${ANC}_freebayes_BCBio.vcf
+        #     # go back to sample directory
+        #     cd ${WORKDIR}/${SAMPLE}
+        # fi
+        cd ${WORKDIR}/${SAMPLE}
         (>&2 echo ***LoFreq - Somatic***)
         lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
         -o ${SAMPLE}_lofreq_
@@ -139,16 +202,16 @@ if [-n "$2"]; then
         bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
 
         # Filters samtools by ancestor
-        (>2 echo ***Bedtools - Intersect***)
+        (>&2 echo ***Bedtools - Intersect***)
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB.vcf \
-                -b ${VCFDIR}/${ANC}_samtools_AB.vcf \
+                -b ${VCFDIR}/${ANC}_samtools_AB_quality_filter.vcf \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf
 
         # Filters freebayes by ancestor 
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
-                -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
+                -b ${VCFDIR}/${ANC}_freebayes_BCBio_quality_filter.vcf \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
         # Filters lofreq by ancestor
@@ -159,7 +222,7 @@ if [-n "$2"]; then
 
 
         # Annotate the AncFiltered
-        (>2 echo ***Annotate***)
+        (>&2 echo ***Annotate***)
         python3 ${SCRIPTS}/annotation_final.py \
                 -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf \
                 -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
@@ -186,7 +249,7 @@ if [-n "$2"]; then
         # DP[x] or SAF,SAR,SRF,SRR = Array with read depth for Fwd, Rev, and from which strand
         # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
 
-        (>2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
+        (>&2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
 
         # After, we would like to create a csv with just the necessary information
         python3 ${SCRIPTS}/stringent_filter.py ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
@@ -215,29 +278,17 @@ if [-n "$2"]; then
         rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz
         rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz.tbi
 
-        # make directories and organize files
-        cd ${WORKDIR}/${SAMPLE}
+else 
+# use a quality and read depth filter on the ancestor vcfs
+(>&2 echo ***BCFtools - Filter***)
+bcftools filter -O v -o ${SAMPLE}_samtools_AB_quality_filter.vcf \
+        -i 'MQ>30 & QUAL>75 & DP>40 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
+        ${SAMPLE}_samtools_AB.vcf
 
-        mkdir results
-
-        mkdir intermediate_vcfs  
-
-        # move files into directories
-
-        mv ${SAMPLE}_final_stringent_compiled.csv results
-        mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt results
-        mv ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt results
-        mv ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt results
-        mv ${SAMPLE}_samtools_AB_AncFiltered_condensed.csv results
-        mv ${SAMPLE}_freebayes_BCBio_AncFiltered_condensed.csv results
-        mv ${SAMPLE}_lofreq_AncFiltered_condensed.csv results
-
-        mv ${SAMPLE}_samtools_AB_AncFiltered.vcf intermediate_vcfs
-        mv ${SAMPLE}_samtools_AB.vcf intermediate_vcfs
-        mv ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf intermediate_vcfs
-        mv ${SAMPLE}_freebayes_BCBio.vcf intermediate_vcfs
-        mv ${SAMPLE}_lofreq_AncFiltered.vcf intermediate_vcfs
-fi 
+bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_quality_filter.vcf \
+        -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
+        ${SAMPLE}_freebayes_BCBio.vcf
+fi
 
 # Remove intermediates
 rm ${SAMPLE}_comb_R1R2.bam.intervals
@@ -249,13 +300,3 @@ rm ${SAMPLE}_R1R2_sort.bam
 rm ${SAMPLE}_R1R2_sort.bam.bai
 rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam
 rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
-
-# remove some random files were somehow produced by the script (Not sure how it was produced)
-# there is some file called 2 that was created. 
-rm 2
-rm temp.txt
-
-mkdir bams
-
-mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam bams
-mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam.bai bams
