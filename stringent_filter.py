@@ -105,7 +105,6 @@ def caller_filter(caller_name, input_file, output_file):
             # else if caller name is "freebayes", then we will filter on values we decided is best for freebayes
             elif caller_name == "freebayes":
                 mqm = None # Mapping Quality Mean of Alt Alleles
-                mqmr = None # Mapping Quality Mean of Reference Alleles
                 srf = None # Number of reference observations on the forward strand, same as samtools DP[0] just different name
                 srr = None # Number of reference observations on the reverse strand
                 saf = None # Number of alternate observations on the forward strand
@@ -120,10 +119,6 @@ def caller_filter(caller_name, input_file, output_file):
                     elif entry.startswith('MQM='): # get MQM
                         num_reads = entry.split('=')[1].split(',') # Get value(s) after 'MQM=' there will be more than one value if it is multi-allelic
                         mqm = sum(float(read_num) for read_num in num_reads) # convert all values into floats and sum them up
-                    
-                    elif entry.startswith('MQMR='): # get MQMR
-                        num_reads = entry.split('=')[1].split(',') # Get value(s) after 'MQMR=' there will be more than one value if it is multi-allelic
-                        mqmr = sum(float(read_num) for read_num in num_reads)
 
                     elif entry.startswith('SAF='): # get SAF
                         num_reads = entry.split('=')[1].split(',') # Get value(s) after 'SAF=' there will be more than one value if it is multi-allelic
@@ -144,9 +139,9 @@ def caller_filter(caller_name, input_file, output_file):
                 # if the annotation is non-coding, make the filter more stringent
                 if anno == "non-coding":
                      # Apply EXTRA stringent filters since it is non-coding
-                    if (all(val is not None for val in [dp, mqm, mqmr, saf, sar, srf, srr]) 
+                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
                         and qual >= caller_QUAL_THRES * 2 and dp >= caller_DP_THRES * 2 
-                        and mqm > 30 and (mqm / (mqm + mqmr)) >= 0.25 and (saf + sar) > 4 
+                        and mqm > 30 and (saf + sar) > 4 
                         and ((srf + saf)/ dp) > 0.01 
                         and ((srr + sar)/ dp) > 0.01
                         ):
@@ -154,9 +149,9 @@ def caller_filter(caller_name, input_file, output_file):
                         filtered_row = [row_dict[col] for col in filtered_fieldnames]
                         writer.writerow(filtered_row)
                 else: # just apply regular stringent filter based on the type of caller was used
-                    if (all(val is not None for val in [dp, mqm, mqmr, saf, sar, srf, srr]) 
+                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES
-                        and mqm > 30 and (mqm / (mqm + mqmr)) >= 0.25 and (saf + sar) > 4 
+                        and mqm > 30 and (saf + sar) > 4 
                         and ((srf + saf)/ dp) > 0.01 
                         and ((srr + sar)/ dp) > 0.01
                         ):
@@ -299,16 +294,22 @@ def main(all_file_names):
 
     # Dictionary to track the count of each row with key-value pair {row : count_of_duplicates}
     row_and_dupe_count = {}
+    # We don't want QUAL column for our final combined output file.
+    selected_columns = ['CHROM', 'POS', 'REF', 'ALT', 'ANNOTATION', 'REGION', 'PROTEIN']
 
     # open all csvs in the converted_files and count number of duplicates using dictionary
     for file_name in converted_files:
             with open(file_name, 'r', newline='') as file:
                 csv_reader = csv.reader(file, delimiter = '\t')
                 header = next(csv_reader)  # Read the header
+                # Filter the header to keep only the selected columns
+                filtered_header = [name for name in header if name in selected_columns]
 
                 # Count the occurrences of each row
                 for row in csv_reader:
-                    row_tuple = tuple(row)
+                    row_dict = dict(zip(header, row))
+                    filtered_row = [row_dict[col] for col in filtered_header]
+                    row_tuple = tuple(filtered_row)
                     
                     if row_tuple in row_and_dupe_count:
                         row_and_dupe_count[row_tuple] += 1
@@ -330,19 +331,22 @@ def main(all_file_names):
             with open(file_name, 'r', newline='') as infile:
                 csv_reader = csv.reader(infile, delimiter='\t')
                 header = next(csv_reader)  # Read the header
-
+                # Filter the header to keep only the selected columns
+                filtered_header = [name for name in header if name in selected_columns]
                 # Add a new header for the duplicate count
                 if not header_written:
-                    csv_writer.writerow(header + ['NUM_OCCURANCES'])
+                    csv_writer.writerow(filtered_header + ['NUM_OCCURANCES'])
                     header_written = True
 
                 # Go through each row and write 
                 for row in csv_reader:
-                    row_tuple = tuple(row)
+                    row_dict = dict(zip(header, row))
+                    filtered_row = [row_dict[col] for col in filtered_header]
+                    row_tuple = tuple(filtered_row)
                     
                     if row_tuple not in seen_rows and row_tuple in row_and_dupe_count:
                         seen_rows.add(row_tuple)
-                        csv_writer.writerow(row + [row_and_dupe_count[row_tuple]])
+                        csv_writer.writerow(row_tuple + tuple([row_and_dupe_count[row_tuple]]))
 
     sort_csv(temp) # sort the combined csv file
     # get rid of the intermediate csv file
