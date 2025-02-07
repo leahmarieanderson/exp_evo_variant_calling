@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024
-#$ -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
-#$ -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
+#$ -wd /net/dunham/vol2/Leah/yEvo_sequencing_250207
+#$ -o /net/dunham/vol2/Leah/yEvo_sequencing_250207/outputs/
+#$ -e /net/dunham/vol2/Leah/yEvo_sequencing_250207/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 #$ -N
@@ -30,10 +30,10 @@ module load freebayes/1.3.6
 FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024
+DIR=/net/dunham/vol2/Leah/yEvo_sequencing_250207
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
-SEQID=batch_test1 # Project name and date for bam header
+SEQID=yEvo_250207 # Project name and date for bam header
 REF=${DIR}/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${DIR}/genomes # Location of custom annotation scripts
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
