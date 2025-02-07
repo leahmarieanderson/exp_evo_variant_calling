@@ -4,7 +4,7 @@ import os
 
 # filter values for a samtools called file
 ST_QUAL_THRES = 70
-ST_DP_THRES = 40
+ST_DP_THRES = 35
 
 # filter values for a freebayes called file
 FB_QUAL_THRES = 20
@@ -36,7 +36,7 @@ def caller_filter(caller_name, input_file, output_file):
         fieldnames = next(reader)  # Read header line
 
         # Specify the columns you want to keep
-        selected_columns = ['CHROM', 'POS', 'REF', 'ALT', 'ANNOTATION', 'REGION', 'PROTEIN']
+        selected_columns = ['CHROM', 'POS', 'REF', 'ALT', 'QUAL', 'ANNOTATION', 'REGION', 'PROTEIN']
 
         # Filter the fieldnames to keep only the selected columns
         filtered_fieldnames = [name for name in fieldnames if name in selected_columns]
@@ -146,7 +146,7 @@ def caller_filter(caller_name, input_file, output_file):
                      # Apply EXTRA stringent filters since it is non-coding
                     if (all(val is not None for val in [dp, mqm, mqmr, saf, sar, srf, srr]) 
                         and qual >= caller_QUAL_THRES * 2 and dp >= caller_DP_THRES * 2 
-                        and mqm > 30 and mqmr > 30 and (saf + sar) > 4 
+                        and mqm > 30 and (saf + sar) > 4 
                         and ((srf + saf)/ dp) > 0.01 
                         and ((srr + sar)/ dp) > 0.01
                         ):
@@ -156,7 +156,7 @@ def caller_filter(caller_name, input_file, output_file):
                 else: # just apply regular stringent filter based on the type of caller was used
                     if (all(val is not None for val in [dp, mqm, mqmr, saf, sar, srf, srr]) 
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES
-                        and mqm > 30 and mqmr > 30 and (saf + sar) > 4 
+                        and mqm > 30 and (saf + sar) > 4 
                         and ((srf + saf)/ dp) > 0.01 
                         and ((srr + sar)/ dp) > 0.01
                         ):

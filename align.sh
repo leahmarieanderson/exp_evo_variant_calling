@@ -1,11 +1,11 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024/
+#$ -wd /net/dunham/vol2/Leah/fixing_pipeline_april2024
 #$ -o /net/dunham/vol2/Leah/fixing_pipeline_april2024/outputs/
 #$ -e /net/dunham/vol2/Leah/fixing_pipeline_april2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
-#$ -N leah_test250122
+#$ -N
 
 ## SNP calling and alignment pipeline for YEvo data
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
@@ -30,10 +30,10 @@ module load freebayes/1.3.6
 FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024/
+DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
-SEQID=leah_freeze_evolution # Project name and date for bam header
+SEQID=batch_test1 # Project name and date for bam header
 REF=${DIR}/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${DIR}/genomes # Location of custom annotation scripts
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
@@ -139,7 +139,7 @@ if [ -n "$2" ]; then
         bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
 
         # Filters samtools by ancestor
-        (>2 echo ***Bedtools - Intersect***)
+        (>$2 echo ***Bedtools - Intersect***)
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB.vcf \
                 -b ${VCFDIR}/${ANC}_samtools_AB.vcf \
@@ -159,7 +159,7 @@ if [ -n "$2" ]; then
 
 
         # Annotate the AncFiltered
-        (>2 echo ***Annotate***)
+        (>&2 echo ***Annotate***)
         python3 ${SCRIPTS}/annotation_final.py \
                 -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_samtools_AB_AncFiltered.vcf \
                 -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
@@ -186,7 +186,7 @@ if [ -n "$2" ]; then
         # DP[x] or SAF,SAR,SRF,SRR = Array with read depth for Fwd, Rev, and from which strand
         # Filters by quality, mapping quality, read depth, number of reads supporting variant, ballence between forward and reverse reads
 
-        (>2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
+        (>&2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
 
         # After, we would like to create a csv with just the necessary information
         python3 ${SCRIPTS}/stringent_filter.py ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
@@ -218,20 +218,13 @@ if [ -n "$2" ]; then
         # make directories and organize files
         cd ${WORKDIR}/${SAMPLE}
 
-        mkdir results
-
         mkdir intermediate_vcfs  
 
         # move files into directories
 
-        mv ${SAMPLE}_final_stringent_compiled.csv results
-        mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt results
-        mv ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt results
-        mv ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt results
-        mv ${SAMPLE}_samtools_AB_AncFiltered_condensed.csv results
-        mv ${SAMPLE}_freebayes_BCBio_AncFiltered_condensed.csv results
-        mv ${SAMPLE}_lofreq_AncFiltered_condensed.csv results
-
+        mv ${SAMPLE}_samtools_AB_AncFiltered_annotated_vcf.txt intermediate_vcfs
+        mv ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt intermediate_vcfs
+        mv ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt intermediate_vcfs
         mv ${SAMPLE}_samtools_AB_AncFiltered.vcf intermediate_vcfs
         mv ${SAMPLE}_samtools_AB.vcf intermediate_vcfs
         mv ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf intermediate_vcfs
@@ -254,8 +247,3 @@ rm ${SAMPLE}_comb_R1R2.RG.MD.sort.bam.bai
 # there is some file called 2 that was created. 
 rm 2
 rm temp.txt
-
-mkdir bams
-
-mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam bams
-mv ${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam.bai bams

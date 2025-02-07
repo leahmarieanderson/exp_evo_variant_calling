@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
-#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
-#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
-#$ -N LMA_H15
+#$ -wd /net/dunham/vol2/Leah/elinor
+#$ -o /net/dunham/vol2/Leah/elinor/outputs/
+#$ -e /net/dunham/vol2/Leah/elinor/errors/
+#$ -N LMA3_3998
 #$ -l mfree=4G
 
 ## CNV pipeline for figuring out CN from bam files: uses both wig file from igvtools and mpileup
@@ -21,9 +21,9 @@ IGVTOOLS=/net/dunham/vol2/Caiti/hybrid_seq/IGVTools/igvtools.jar
 
 SAMPLE=$1 #sample prefix (ex: Sample-01)
 SIZE=$2
-DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
-WORKDIR=${DIR}/WorkDirectory
-BAMDIR=${WORKDIR}/${SAMPLE}/bams
+DIR=/net/dunham/vol2/Leah/fixing_pipeline_april2024
+WORKDIR=/net/dunham/vol2/Leah/elinor
+BAMDIR=${WORKDIR}/${SAMPLE}/
 CNDIR=${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp  #CHANGE back to ${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp
 SCRIPTS=${DIR}/exp_evo_variant_calling
 REF=/net/dunham/vol2/Caiti/reference_seq/sacCer3.fasta
