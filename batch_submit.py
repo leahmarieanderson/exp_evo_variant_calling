@@ -15,24 +15,12 @@ def submit_job(script_name, sample_name, ancestor_name):
     # update script to set job name to sample_name
     with open(script_name, "r") as file:
         lines = file.readlines()
-    
-    # update the name
-    updated_lines = []
-    for line in lines:
-        if line.startswith("#$ -N"):
-            updated_lines.append(f"#$ -N {sample_name}\n")
-        else:
-            updated_lines.append(line)
-
-    # Write the updated script back to the file
-    with open(script_name, "w") as file:
-        file.writelines(updated_lines)
 
     # Print job submission details
     print(f"Submitting job for sample: {sample_name} with ancestor: {ancestor_name}")
     
     # Run the command to submit the job
-    subprocess.run(['qsub', script_name, sample_name, ancestor_name])
+    subprocess.run(['qsub', '-N', sample_name, script_name, sample_name, ancestor_name])
 
 def get_sample_names(directory):
     # Get all R1 sample files
@@ -139,8 +127,7 @@ def main():
     for line in script_lines:
         # form an array of the currenty job directives in the script
         if line.startswith("#$ -"):
-            if(not line.startswith("#$ -N")):
-                bash_settings.append(line)
+            bash_settings.append(line)
         # form an array of the current script variables 
         elif line.startswith("FOLDER="):
             script_variables.append(line.strip())
@@ -264,8 +251,6 @@ def main():
             updated_lines.append(f"{mfree_option}\n")
         elif line.startswith("#$ -l h_rt"):
             updated_lines.append(f"{h_rt_option}\n")
-        elif line.startswith("#$ -N"):
-            updated_lines.append("#$ -N \n")
         elif line.startswith("FOLDER="):
             updated_lines.append(f"{FOLDER_option}\n")
         elif line.startswith("DIR="):
@@ -290,23 +275,15 @@ def main():
     user_submit = input(f"Would you like to qsub all samples in {fastq_dir} ? (y/n) : ")
     if user_submit.lower() == 'y':
         ancestor_name = input("What is the name of the ancestor? : ")
-        multi_qsub(script_name, fastq_dir, ancestor_name)
-        
-        # update script to reset job name
-        with open(script_name, "r") as file:
-            lines = file.readlines()
-        
-        # reset the name line
-        updated_lines = []
-        for line in lines:
-            if line.startswith("#$ -N"):
-                updated_lines.append(f"#$ -N\n")
-            else:
-                updated_lines.append(line)
+        # check if ancestor directory even exists in WorkDirectory
 
-        # Write the updated script back to the file
-        with open(script_name, "w") as file:
-            file.writelines(updated_lines)
+        if os.path.isdir(DIR_option[4:] + "/WorkDirectory"):
+            multi_qsub(script_name, fastq_dir, ancestor_name)
+        else:
+            # Ancestor directory does not exist in WorkDirectory, prompt user to "qsub align.sh ancestor" first before batch submitting
+            print(f"{ancestor_name} not found in {DIR_option[4:]}/WorkDirectory, cannot batch submit samples without relevant ancestor files \n")
+            print(f"Align the ancestor files first with the command 'qsub align.sh {ancestor_name}' then use batch submit python script after that job is completed")
+
     else: 
         print("No qsub has been selected. Script completed successfully.")
 

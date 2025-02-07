@@ -4,7 +4,7 @@ import os
 
 # filter values for a samtools called file
 ST_QUAL_THRES = 70
-ST_DP_THRES = 40
+ST_DP_THRES = 35
 
 # filter values for a freebayes called file
 FB_QUAL_THRES = 20
@@ -146,7 +146,7 @@ def caller_filter(caller_name, input_file, output_file):
                      # Apply EXTRA stringent filters since it is non-coding
                     if (all(val is not None for val in [dp, mqm, mqmr, saf, sar, srf, srr]) 
                         and qual >= caller_QUAL_THRES * 2 and dp >= caller_DP_THRES * 2 
-                        and mqm > 30 and mqmr > 30 and (saf + sar) > 4 
+                        and mqm > 30 and (mqm / (mqm + mqmr)) >= 0.25 and (saf + sar) > 4 
                         and ((srf + saf)/ dp) > 0.01 
                         and ((srr + sar)/ dp) > 0.01
                         ):
@@ -156,7 +156,7 @@ def caller_filter(caller_name, input_file, output_file):
                 else: # just apply regular stringent filter based on the type of caller was used
                     if (all(val is not None for val in [dp, mqm, mqmr, saf, sar, srf, srr]) 
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES
-                        and mqm > 30 and mqmr > 30 and (saf + sar) > 4 
+                        and mqm > 30 and (mqm / (mqm + mqmr)) >= 0.25 and (saf + sar) > 4 
                         and ((srf + saf)/ dp) > 0.01 
                         and ((srr + sar)/ dp) > 0.01
                         ):
@@ -241,7 +241,7 @@ def filter_vcf(input_file):
             temp_file.writelines(cleaned_lines)
 
     # Create a new name for output file
-    csv_name = input_file.replace("_annotated_vcf.txt", "_condensed.csv")
+    csv_name = input_file.replace("_annotated_vcf.txt", "_condensed.txt")
 
     # Filter the temp file we created based on caller used to call the variants
     caller_filter(caller_name, "temp.txt", csv_name)
@@ -282,7 +282,7 @@ def sort_csv(csv_name):
         rows_sorted = sorted(rows, key=lambda x: (chromosome_conversion(x['CHROM']), int(x['POS'])))
 
         # Write the sorted rows to a new tab-delimited CSV file
-        final_result_name = csv_name.replace('all_condensed.csv','final_stringent_compiled.csv')
+        final_result_name = csv_name.replace('all_condensed.txt','final_stringent_compiled.txt')
         with open(final_result_name, 'w', newline='') as outfile:
             fieldnames = reader.fieldnames
             writer = csv.DictWriter(outfile, fieldnames=fieldnames, delimiter='\t')
@@ -318,7 +318,7 @@ def main(all_file_names):
     sample_name_end_index = find_second_underscore(converted_files[0])
     sample_name = converted_files[0][:sample_name_end_index]
 
-    temp = sample_name + '_all_condensed.csv' # make a temp csv file name
+    temp = sample_name + '_all_condensed.txt' # make a temp csv file name
 
     # Open the output file in write mode
     with open(temp, 'w', newline='') as outfile:
@@ -349,7 +349,7 @@ def main(all_file_names):
     if os.path.exists(temp):
         os.remove(temp)
 
-    print("Combined CSV saved to " + sample_name + "_final_stringent_compiled.csv")
+    print("Combined CSV saved to " + sample_name + "_final_stringent_compiled.txt")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Combine multiple CSV files into one.")
