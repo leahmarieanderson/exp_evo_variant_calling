@@ -5,29 +5,45 @@ import os
 # filter values for a samtools called file
 ST_QUAL_THRES = 70
 ST_DP_THRES = 35
+ST_Non_Coding_QUAL_THRES = 175
+ST_Telomere_QUAL_THRES = 200
 
 # filter values for a freebayes called file
 FB_QUAL_THRES = 20
 FB_DP_THRES = 10
+FB_Non_Coding_QUAL_THRES = 600
+FB_Telomere_QUAL_THRES = 650
 
 # filter values for a lofreq called file
 LOFREQ_QUAL_THRES = 20
 LOFREQ_DP_THRES = 20
+LOFREQ_Non_Coding_QUAL_THRES = 40
+LOFREQ_Telomere_QUAL_THRES = 60
+
+non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron"]
 
 # use unique filters on the txt file (which represents our simpified vcf file)
 def caller_filter(caller_name, input_file, output_file):
     caller_QUAL_THRES = 0
     caller_DP_THRES = 0
+    caller_NC_QUAL_THRES = 0
+    caller_TELOMERE_QUAL_THRES = 0
     # set filters to corresponding values according to their caller_name
     if caller_name == "samtools":
         caller_QUAL_THRES = ST_QUAL_THRES
         caller_DP_THRES = ST_DP_THRES
+        caller_NC_QUAL_THRES = ST_Non_Coding_QUAL_THRES
+        caller_TELOMERE_QUAL_THRES = ST_Telomere_QUAL_THRES
     elif caller_name == "freebayes":
         caller_QUAL_THRES = FB_QUAL_THRES
         caller_DP_THRES = FB_DP_THRES
+        caller_NC_QUAL_THRES = FB_Non_Coding_QUAL_THRES
+        caller_TELOMERE_QUAL_THRES = FB_Telomere_QUAL_THRES
     elif caller_name == "lofreq":
         caller_QUAL_THRES = LOFREQ_QUAL_THRES
         caller_DP_THRES = LOFREQ_DP_THRES
+        caller_NC_QUAL_THRES = LOFREQ_Non_Coding_QUAL_THRES
+        caller_TELOMERE_QUAL_THRES = LOFREQ_Telomere_QUAL_THRES
     
     # start writing 
     with open(input_file, 'r') as cleaned_file, open(output_file, 'w', newline='') as outfile:
@@ -79,19 +95,31 @@ def caller_filter(caller_name, input_file, output_file):
                     if entry.startswith('MQ='): # get MQ
                         mq = float(entry.split('=')[1])
 
-                # if the annotation is non-coding, make the filter more stringent
-                if anno == "non-coding":
-                    # Apply EXTRA stringent filters since it is non-coding
-                    if (all(val is not None for val in [dp, mq, ref_for, ref_rev, alt_for, alt_rev]) 
-                        and qual >= caller_QUAL_THRES * 2 and dp >= caller_DP_THRES * 2 
-                        and mq > 30 and (alt_for + alt_rev) > 4 
-                        and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
-                        and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
-                        ):
-                        # Create a filtered row with only the selected columns
-                        filtered_row = [row_dict[col] for col in filtered_fieldnames]
-                        writer.writerow(filtered_row)
-                else: # just apply regular stringent filter based on the type of caller was used
+                # if the annotation is not in non_gff_annotations, make the filter more stringent
+                if anno not in non_gff_annonations:
+                    # If telomere, then use the telomere qual value threshold
+                    if anno == "telomere":
+                        if (all(val is not None for val in [dp, mq, ref_for, ref_rev, alt_for, alt_rev]) 
+                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                            and mq > 30 and (alt_for + alt_rev) > 4 
+                            and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
+                            and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
+                            ):
+                            # Create a filtered row with only the selected columns
+                            filtered_row = [row_dict[col] for col in filtered_fieldnames]
+                            writer.writerow(filtered_row)
+                    else: 
+                        # Apply stringent filters since it is non-coding
+                        if (all(val is not None for val in [dp, mq, ref_for, ref_rev, alt_for, alt_rev]) 
+                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                            and mq > 30 and (alt_for + alt_rev) > 4 
+                            and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
+                            and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
+                            ):
+                            # Create a filtered row with only the selected columns
+                            filtered_row = [row_dict[col] for col in filtered_fieldnames]
+                            writer.writerow(filtered_row)
+                else: # it's coding, just apply regular stringent filter based on the type of caller was used
                     if (all(val is not None for val in [dp, mq, ref_for, ref_rev, alt_for, alt_rev])  # all variables aren't None
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES  # greater than or equal to our QUAL and DP thresholds
                         and mq > 30 and (alt_for + alt_rev) >= 4  # Mapping Quality is higher than 30 and alt read depth greater than 4 on both forward and reverse combined
@@ -136,19 +164,31 @@ def caller_filter(caller_name, input_file, output_file):
                         num_reads = entry.split('=')[1].split(',') # Get value(s) after 'SRR=' there will be more than one value if it is multi-allelic
                         srr = sum(float(read_num) for read_num in num_reads)
                 
-                # if the annotation is non-coding, make the filter more stringent
-                if anno == "non-coding":
-                     # Apply EXTRA stringent filters since it is non-coding
-                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
-                        and qual >= caller_QUAL_THRES * 2 and dp >= caller_DP_THRES * 2 
-                        and mqm > 30 and (saf + sar) > 4 
-                        and ((srf + saf)/ dp) > 0.01 
-                        and ((srr + sar)/ dp) > 0.01
-                        ):
-                        # Create a filtered row with only the selected columns
-                        filtered_row = [row_dict[col] for col in filtered_fieldnames]
-                        writer.writerow(filtered_row)
-                else: # just apply regular stringent filter based on the type of caller was used
+                # if the annotation is not in non_gff_annotations, make the filter more stringent
+                if anno not in non_gff_annonations:
+                    # If telomere, then use the telomere qual value threshold
+                    if anno == "telomere":
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
+                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                            and mqm > 30 and (saf + sar) > 4 
+                            and ((srf + saf)/ dp) > 0.01 
+                            and ((srr + sar)/ dp) > 0.01
+                            ):
+                            # Create a filtered row with only the selected columns
+                            filtered_row = [row_dict[col] for col in filtered_fieldnames]
+                            writer.writerow(filtered_row)
+                    else: 
+                        # Apply stringent filters since it is non-coding
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
+                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                            and mqm > 30 and (saf + sar) > 4 
+                            and ((srf + saf)/ dp) > 0.01 
+                            and ((srr + sar)/ dp) > 0.01
+                            ):
+                            # Create a filtered row with only the selected columns
+                            filtered_row = [row_dict[col] for col in filtered_fieldnames]
+                            writer.writerow(filtered_row)
+                else: # it's coding, just apply regular stringent filter based on the type of caller was used
                     if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES
                         and mqm > 30 and (saf + sar) > 4 
@@ -182,19 +222,31 @@ def caller_filter(caller_name, input_file, output_file):
                     if entry.startswith('MQ='): # get MQ
                         mq = float(entry.split('=')[1])
 
-                # if the annotation is non-coding, make the filter more stringent
-                if anno == "non-coding":
-                    # Apply EXTRA stringent filters since it is non-coding
-                    if (all(val is not None for val in [dp, ref_for, ref_rev, alt_for, alt_rev]) 
-                        and qual >= caller_QUAL_THRES * 2 and dp >= caller_DP_THRES * 2 
-                        and (alt_for + alt_rev) > 4 
-                        and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
-                        and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
-                        ):
-                        # Create a filtered row with only the selected columns
-                        filtered_row = [row_dict[col] for col in filtered_fieldnames]
-                        writer.writerow(filtered_row)
-                else: # just apply regular stringent filter based on the type of caller was used
+                # if the annotation is not in non_gff_annotations, make the filter more stringent
+                if anno not in non_gff_annonations:
+                    # If telomere, then use the telomere qual value threshold
+                    if anno == "telomere":
+                        if (all(val is not None for val in [dp, ref_for, ref_rev, alt_for, alt_rev]) 
+                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                            and (alt_for + alt_rev) > 4 
+                            and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
+                            and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
+                            ):
+                            # Create a filtered row with only the selected columns
+                            filtered_row = [row_dict[col] for col in filtered_fieldnames]
+                            writer.writerow(filtered_row)
+                    else: 
+                        # Apply stringent filters since it is non-coding
+                        if (all(val is not None for val in [dp, ref_for, ref_rev, alt_for, alt_rev]) 
+                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                            and (alt_for + alt_rev) > 4 
+                            and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
+                            and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
+                            ):
+                            # Create a filtered row with only the selected columns
+                            filtered_row = [row_dict[col] for col in filtered_fieldnames]
+                            writer.writerow(filtered_row)
+                else: # it's coding, just apply regular stringent filter based on the type of caller was used
                     if (all(val is not None for val in [dp, ref_for, ref_rev, alt_for, alt_rev])  # all variables aren't None
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES  # greater than or equal to our QUAL and DP thresholds
                         and (alt_for + alt_rev) >= 4  # Mapping Quality is higher than 30 and alt read depth greater than 4 on both forward and reverse combined
