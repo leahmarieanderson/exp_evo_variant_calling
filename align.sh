@@ -149,41 +149,18 @@ freebayes -f ${REF} \
 if [ -n "$2" ]; then 
         # Check to see if ancestor.bam does not exists
         if [ ! -e ${ANCBAM} ]; then
+        # Throw a warning that we cannot find the Ancestor bam and exit the shell script.
             (>&2 echo ***${ANCBAM} cannot be found***)
-            (>&2 echo ***Creating Ancestor directory in WorkDirectory***)
-            # we can do a qsub align.sh ANC to create our bam files
-            # so we first have to cd into our align.sh directory
-            qsub -sync y -N ${ANC} ${SCRIPTS}/align.sh ${ANC} 
+            (>&2 echo ***Need to create Ancestor bam or modify path***)
+            exit 1 
+            # the commented code below would have qsubbed the ancestor bam to be created and then this current
+            # script would have waited for the ancestor bam to be created before continuing.
+            # but it would get a little too complicated if we did a batch run and every sample caused 
+            # a qsub for the same ancestor multiple times. 
+            # qsub -sync y -N ${ANC} ${SCRIPTS}/align.sh ${ANC} 
+
         fi
-        # Go back to Work Directory
-        # Check to see if ancestor_samtools_AB_quality_filter.vcf does not exists
-        if [ ! -e ${WORKDIR}/${ANC}/${ANC}_samtools_AB_quality_filter.vcf ]; then
-            (>&2 echo ***The file ${WORKDIR}/${ANC}/${ANC}_samtools_AB_quality_filter.vcf cannot be found***)
-            (>&2 echo ***Creating ${WORKDIR}/${ANC}/${ANC}_samtools_AB_quality_filter.vcf***)
-            # go to ANC directory
-            cd ${WORKDIR}/${ANC}
-            # use a quality and read depth filter on the ancestor vcfs and create filtered samtools vcf
-            (>&2 echo ***BCFtools - Filter - Samtools***)
-            bcftools filter -O v -o ${ANC}_samtools_AB_quality_filter.vcf \
-                -i 'MQ>30 & QUAL>75 & DP>40 & (DP4[2]+DP4[3])>4 & (DP4[0]+DP4[2])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01 & (DP4[1]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3])>0.01' \
-                ${ANC}_samtools_AB.vcf
-            # go back to sample directory
-            cd ${WORKDIR}/${SAMPLE}
-        fi
-        # Check to see if ancestor_freebayes_quality_filter.vcf does not exists
-        if [ ! -e ${WORKDIR}/${ANC}/${ANC}_freebayes_BCBio_quality_filter.vcf ]; then
-            (>&2 echo ***The file ${WORKDIR}/${ANC}/${ANC}_freebayes_BCBio_quality_filter.vcf cannot be found***)
-            (>&2 echo ***Creating ${WORKDIR}/${ANC}/${ANC}_freebayes_BCBio_quality_filter.vcf***)
-            # go to ANC directory
-            cd ${WORKDIR}/${ANC}
-            # use a quality and read depth filter on the ancestor vcfs and create filtered freebayes vcf
-            (>&2 echo ***BCFtools - Filter - Freebayes***)
-            bcftools filter -O v -o ${ANC}_freebayes_BCBio_quality_filter.vcf \
-                 -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
-                ${ANC}_freebayes_BCBio.vcf
-            # go back to sample directory
-            cd ${WORKDIR}/${SAMPLE}
-        fi
+        # Go to Work Directory
         cd ${WORKDIR}/${SAMPLE}
         (>&2 echo ***LoFreq - Somatic***)
         lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam -f ${REF} \
@@ -279,7 +256,7 @@ bcftools filter -O v -o ${SAMPLE}_samtools_AB_quality_filter.vcf \
         ${SAMPLE}_samtools_AB.vcf
 
 bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_quality_filter.vcf \
-        -i 'MQM>30 & MQMR>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
+        -i 'MQM>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
         ${SAMPLE}_freebayes_BCBio.vcf
 fi
 
