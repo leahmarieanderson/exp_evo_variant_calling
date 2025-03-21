@@ -23,7 +23,7 @@ SAMPLE=$1 #sample prefix (ex: Sample-01)
 SIZE=$2
 DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory
-BAMDIR=${WORKDIR}/${SAMPLE}/bams
+BAMDIR=${WORKDIR}/${SAMPLE}
 CNDIR=${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp  #CHANGE back to ${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp
 SCRIPTS=${DIR}/exp_evo_variant_calling
 REF=/net/dunham/vol2/Caiti/reference_seq/sacCer3.fasta
@@ -78,16 +78,16 @@ else
 		# Creating Ancestor Wig files
 
 		java -Xmx2g -jar $GATK_DIR/GenomeAnalysisTK.jar -T DepthOfCoverage \
-			-R ${REF} -I ${WORKDIR}/${ANC}/bams/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
+			-R ${REF} -I ${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
 			-o ${WORKDIR}/${ANC}/CNV_new_${SIZE}bp/${ANC}_comb_R1R2.RG.MD.realign.sort.bam.DOC \
 			-XL chrM -omitBaseOutput -omitLocusTable -omitIntervals -rf BadCigar
 
 		java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQuality 30 \
-			${WORKDIR}/${ANC}/bams/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
+			${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
 			${WORKDIR}/${ANC}/CNV_new_${SIZE}bp/${ANC}_${SIZE}bp.wig ${REF}
 
 		java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQuality 0 \
-			${WORKDIR}/${ANC}/bams/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
+			${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
 			${WORKDIR}/${ANC}/CNV_new_${SIZE}bp/${ANC}_${SIZE}bp.All.wig ${REF}
 
 		python ${SCRIPTS}/wigNormalizedToAverageReadDepth_MapQ_ForPlot.py \
