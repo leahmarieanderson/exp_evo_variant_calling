@@ -343,62 +343,67 @@ def main(all_file_names):
     for txtfile in all_file_names:
         csv_name = filter_vcf(txtfile)
         converted_files.append(csv_name)
+    
+    # Input CSV files
+    csv_files = {
+        "samtools": "",
+        "freebayes": "",
+        "lofreq": ""
+    }
 
-    # Dictionary to track the count of each row with key-value pair {row : count_of_duplicates}
-    row_and_dupe_count = {}
-    # We don't want QUAL column for our final combined output file.
-    selected_columns = ['CHROM', 'POS', 'REF', 'ALT', 'ANNOTATION', 'REGION', 'PROTEIN']
+    for file in converted_files:
+        if "samtools" in file:
+            csv_files["samtools"] = file
+        elif "freebayes" in file:
+            csv_files["freebayes"] = file
+        elif "lofreq" in file:
+            csv_files["lofreq"] = file
+        else:
+            print(f"Warning: No match found for file {file}")
 
-    # open all csvs in the converted_files and count number of duplicates using dictionary
-    for file_name in converted_files:
-            with open(file_name, 'r', newline='') as file:
-                csv_reader = csv.reader(file, delimiter = '\t')
-                header = next(csv_reader)  # Read the header
-                # Filter the header to keep only the selected columns
-                filtered_header = [name for name in header if name in selected_columns]
+    # Dictionary to store merged data
+    variant_dict = {}
 
-                # Count the occurrences of each row
-                for row in csv_reader:
-                    row_dict = dict(zip(header, row))
-                    filtered_row = [row_dict[col] for col in filtered_header]
-                    row_tuple = tuple(filtered_row)
-                    
-                    if row_tuple in row_and_dupe_count:
-                        row_and_dupe_count[row_tuple] += 1
-                    else:
-                        row_and_dupe_count[row_tuple] = 1
+    # Read each CSV file and store values
+    for source, file in csv_files.items():
+        with open(file, "r") as f:
+            reader = csv.DictReader(f,  delimiter="\t")
+            reader.fieldnames = [name.strip() for name in reader.fieldnames]
+            for row in reader:
+                key = (row["CHROM"], row["POS"], row["REF"], row["ALT"], row["ANNOTATION"], row["REGION"], row["PROTEIN"])
+
+                if key not in variant_dict:
+                    variant_dict[key] = {
+                        "NUM_OCCURRENCES": 0,
+                        "QUAL_samtools": None,
+                        "QUAL_freebayes": None,
+                        "QUAL_lofreq": None
+                    }
+                
+                # Update count and QUAL value for the specific tool
+                variant_dict[key]["NUM_OCCURRENCES"] += 1
+                variant_dict[key][f"QUAL_{source}"] = row["QUAL"]
 
     sample_name_end_index = find_second_underscore(converted_files[0])
     sample_name = converted_files[0][:sample_name_end_index]
 
     temp = sample_name + '_all_condensed.txt' # make a temp csv file name
-
-    # Open the output file in write mode
-    with open(temp, 'w', newline='') as outfile:
-        seen_rows = set()
-        csv_writer = csv.writer(outfile, delimiter = '\t')
-        header_written = False
-
-        for file_name in converted_files:
-            with open(file_name, 'r', newline='') as infile:
-                csv_reader = csv.reader(infile, delimiter='\t')
-                header = next(csv_reader)  # Read the header
-                # Filter the header to keep only the selected columns
-                filtered_header = [name for name in header if name in selected_columns]
-                # Add a new header for the duplicate count
-                if not header_written:
-                    csv_writer.writerow(filtered_header + ['NUM_OCCURANCES'])
-                    header_written = True
-
-                # Go through each row and write 
-                for row in csv_reader:
-                    row_dict = dict(zip(header, row))
-                    filtered_row = [row_dict[col] for col in filtered_header]
-                    row_tuple = tuple(filtered_row)
-                    
-                    if row_tuple not in seen_rows and row_tuple in row_and_dupe_count:
-                        seen_rows.add(row_tuple)
-                        csv_writer.writerow(row_tuple + tuple([row_and_dupe_count[row_tuple]]))
+    # Write the combined CSV output
+    with open(temp, "w", newline="") as f:
+        fieldnames = ["CHROM", "POS", "REF", "ALT", "ANNOTATION", "REGION", "PROTEIN", 
+                    "NUM_OCCURRENCES", "QUAL_samtools", "QUAL_freebayes", "QUAL_lofreq"]
+        writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
+        writer.writeheader()
+        
+        for (CHROM, POS, REF, ALT, ANNOTATION, REGION, PROTEIN), values in variant_dict.items():
+            writer.writerow({
+                "CHROM": CHROM, "POS": POS, "REF": REF, "ALT": ALT, 
+                "ANNOTATION": ANNOTATION, "REGION": REGION, "PROTEIN": PROTEIN,
+                "NUM_OCCURRENCES": values["NUM_OCCURRENCES"],
+                "QUAL_samtools": values["QUAL_samtools"],
+                "QUAL_freebayes": values["QUAL_freebayes"],
+                "QUAL_lofreq": values["QUAL_lofreq"]
+            })
 
     sort_csv(temp) # sort the combined csv file
     # get rid of the intermediate csv file
