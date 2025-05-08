@@ -1,0 +1,59 @@
+==================================================
+file name: sacCer3.fasta            
+sequences:            17
+total length:   12157105 bp  (12157105 bp excl N/X-runs)
+GC level:         38.15 %
+bases masked:     616270 bp ( 5.07 %)
+==================================================
+               number of      length   percentage
+               elements*    occupied  of sequence
+--------------------------------------------------
+Retroelements          490       399925 bp    3.29 %
+   SINEs:                0            0 bp    0.00 %
+   Penelope              0            0 bp    0.00 %
+   LINEs:                0            0 bp    0.00 %
+    CRE/SLACS            0            0 bp    0.00 %
+     L2/CR1/Rex          0            0 bp    0.00 %
+     R1/LOA/Jockey       0            0 bp    0.00 %
+     R2/R4/NeSL          0            0 bp    0.00 %
+     RTE/Bov-B           0            0 bp    0.00 %
+     L1/CIN4             0            0 bp    0.00 %
+   LTR elements:       490       399925 bp    3.29 %
+     BEL/Pao             0            0 bp    0.00 %
+     Ty1/Copia         436       375835 bp    3.09 %
+     Gypsy/DIRS1        54        24090 bp    0.20 %
+       Retroviral        0            0 bp    0.00 %
+
+DNA transposons          0            0 bp    0.00 %
+   hobo-Activator        0            0 bp    0.00 %
+   Tc1-IS630-Pogo        0            0 bp    0.00 %
+   En-Spm                0            0 bp    0.00 %
+   MuDR-IS905            0            0 bp    0.00 %
+   PiggyBac              0            0 bp    0.00 %
+   Tourist/Harbinger     0            0 bp    0.00 %
+   Other (Mirage,        0            0 bp    0.00 %
+    P-element, Transib)
+
+Rolling-circles          0            0 bp    0.00 %
+
+Unclassified:           19        50995 bp    0.42 %
+
+Total interspersed repeats:      450920 bp    3.71 %
+
+
+Small RNA:               6        12034 bp    0.10 %
+
+Satellites:              0            0 bp    0.00 %
+Simple repeats:       2979       127943 bp    1.05 %
+Low complexity:        536        25466 bp    0.21 %
+==================================================
+
+* most repeats fragmented by insertions or deletions
+  have been counted as one element
+                                                      
+
+The query species was assumed to be saccharomyces cerevisiae
+RepeatMasker version open-4.0.5 , default mode
+                                   
+run with rmblastn version 2.2.23+
+RepBase Update 20140131, RM database version 20140131
