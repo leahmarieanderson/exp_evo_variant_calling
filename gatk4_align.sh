@@ -35,10 +35,10 @@ ANC=$2
 DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
-SEQID=leah_freeze_evolution # Project name and date for bam header
-REF=${DIR}/genomes/sacCer3.fasta # Reference genome
-ANNOTATE=${DIR}/genomes # Location of custom annotation scripts
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
+SEQID=leah_freeze_evolution # Project name and date for bam header
+REF=${SCRIPTS}/genomes/sacCer3.fasta # Reference genome
+ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
 VCFDIR=${WORKDIR}/${ANC}
 
