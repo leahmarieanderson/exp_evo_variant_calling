@@ -3,10 +3,10 @@ import argparse
 import os
 
 # filter values for a gatk called file
-GATK_QUAL_THRES = 70
+GATK_QUAL_THRES = 125
 GATK_DP_THRES = 35
-GATK_Non_Coding_QUAL_THRES = 175
-GATK_Telomere_QUAL_THRES = 200
+GATK_Non_Coding_QUAL_THRES = 250
+GATK_Telomere_QUAL_THRES = 500
 
 # filter values for a freebayes called file
 FB_QUAL_THRES = 20
@@ -18,7 +18,7 @@ FB_Telomere_QUAL_THRES = 650
 LOFREQ_QUAL_THRES = 20
 LOFREQ_DP_THRES = 20
 LOFREQ_Non_Coding_QUAL_THRES = 40
-LOFREQ_Telomere_QUAL_THRES = 60
+LOFREQ_Telomere_QUAL_THRES = 80
 
 non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron"]
 
