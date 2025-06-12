@@ -142,19 +142,12 @@ Now we want to align and annotate the evolved samples. We have two methods of do
 If you only have 1 or 2 samples to run, you can just submit the qsub jobs individually this way:
 
 ```php
-qsub -N sample1_name align.sh sample1 anc_AB
+qsub -N sample1_name align.sh sample1 my_ancestor_strain
 ```
-After that, you can check on your job status by using `qstat -u username`.
 
 ### Batch submit
 You can submit multiple samples for alignment and annotating as long as they all come from the same ancestor and  
-they have both R1 and R2 fastqs in one directory.  
-
-First, cd into your `exp_evo_variant_calling` directory
-```php
-cd path/to/exp_evo_variant_calling
-```
-Next, you'll want to run the `batch_submit` python script again.
+they have both R1 and R2 fastqs in one directory. You can do this by submitting the `batch_submit` python script again.
 
 ```php
 python3 batch_submit.py
@@ -170,6 +163,7 @@ What is the name of your ancestor?
 Enter your ancestor name. If the ancestor and all necessary files are not present in the `WorkingDirectory` are not present, the program will exit.
 
 If everything works successfully, each sample in your fastq folder will be submitted to the cluster as a qsub for the `align.sh` script.
+You can check on your job status by using `qstat -u username`.
 
 
 ## Align.sh Outputs
@@ -177,30 +171,22 @@ After your `align.sh` jobs have been completed, you will have a few new director
 In this example, the ancestor is `anc_AB` and the sample that was submitted for alignment and annotation is `sample1`.
 ```bash
 └── WorkDirectory
-        ├── anc_AB
+        ├── my_ancestor_sample
         └── sample1  *NEW*
-            ├── bams
-            ├── dup_metrics
-            ├── intermediate_vcfs
-            └── results
-```
-The directory that we are most interested in is the `results` directory. 
-```
-└── results
-        ├── sample1_final_stringent_compiled.csv       
-        ├── sample1_freebayes_BCBio_AncFiltered_annotated_vcf.txt
-        ├── sample1_freebayes_BCBio_AncFiltered_condensed.csv
-        ├── sample1_lofreq_AncFiltered_annotated_vcf.txt
-        ├── sample1_lofreq_AncFiltered_condensed.csv
-        ├── sample1_samtools_AB_AncFiltered_annotated_vcf.txt
-        └── sample1_samtools_AB_AncFiltered_condensed.csv
+            ├── sample1_final_stringent_compiled.csv       
+            ├── sample1_freebayes_BCBio_AncFiltered_annotated_vcf.txt
+            ├── sample1_freebayes_BCBio_AncFiltered_condensed.csv
+            ├── sample1_lofreq_AncFiltered_annotated_vcf.txt
+            ├── sample1_lofreq_AncFiltered_condensed.csv
+            ├── sample1_samtools_AB_AncFiltered_annotated_vcf.txt
+            └── sample1_samtools_AB_AncFiltered_condensed.csv
 ```
 
 - The `freebayes_BCBio_AncFiltered_annotated_vcf.txt`, `lofreq_AncFiltered_annotated_vcf.txt`, and `samtools_AB_AncFiltered_annotated_vcf.txt` are annotated files of each variant caller which has all the ancestor mutations already filtered out. This means that these files contains only the variants that were found over the course of your experiment.
 
 - The `freebayes_BCBio_AncFiltered_condensed.csv`, `lofreq_AncFiltered_condensed.csv`, and `samtools_AB_AncFiltered_condensed.csv` are the same files as the ones mentioned above but we applyed a unique set of filter conditions for each file based on their specific variant caller and we condense the columns. The `_condensed.csv` files only show the columns that are relevant for our analysis. Such columns like `CHROM`, `POS`, `REF`, `ALT`, `ANNOTATION`, `REGION`, and `PROTEIN`. For the filter, a file's particular variant caller changes the filter conditions for `QUAL`,`DP`, and number of reads on the ref and alt alleles. We would keep any variants that pass the specified threshold for `QUAL`, `DP`, etc. 
 
-- For example, we set our Samtools filter to have a default `QUAL` threshold of 75, so any variants under 75 for the `QUAL` would not make it into the `samtools_AB_AncFiltered_condensed.csv`. Our Freebayes filter on the other hand has a `QUAL` threshold of 20.
+- For example, we set our Gatk4 filter to have a default `QUAL` threshold of 125, so any variants under 125 for the `QUAL` would not make it into the `samtools_AB_AncFiltered_condensed.csv`. Our Freebayes filter on the other hand has a `QUAL` threshold of 20.
 
 - The `final_stringent_compiled.csv` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.csv`, `lofreq_AncFiltered_condense.csv`, and `samtools_AB_AncFiltered_condensed.csv` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers. 
 
@@ -214,4 +200,5 @@ lofreq_AncFiltered_annotated_vcf.txt ──────────────�
 samtools_AB_AncFiltered_annotated_vcf.txt ─────────────[filter]─────samtools_AB_AncFiltered_condensed.csv──────┘
 ```
 
-The other directory `intermediate_vcfs` contains the vcfs that were used to create the files in the `results` directory, some of these files are vcfs that have not been run through our annotation script and thus are without the `ANNOTATIONS`, `REGION`, and `PROTEIN` column, but can provide value if you wanted to look at the raw outputs of samtools, freebayes, and lofreq. 
+It is recommended that each variant is then checked in a genome alignment viewing software such as IGV: https://igv.org/
+By opening the final_stringent_compiled.csv file in a program like Microsoft Excel, you can sort the called variants by quality score and/or number of occurrences across the different variant callers.
