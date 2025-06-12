@@ -192,7 +192,7 @@ if [ -n "$2" ]; then
         (>&2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
 
         # After, we would like to create a csv with just the necessary information
-        python3 ${SCRIPTS}/gatk4_stringent_filter.py \
+        python3 ${SCRIPTS}/stringent_filter.py \
         ${SAMPLE}_gatk_haplo_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
