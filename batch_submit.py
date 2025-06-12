@@ -20,7 +20,7 @@ def submit_job(script_name, sample_name, ancestor_name):
     print(f"Submitting job for sample: {sample_name} with ancestor: {ancestor_name}")
     
     # Run the command to submit the job
-    subprocess.run(['qsub', '-N', sample_name, script_name, sample_name, ancestor_name])
+    subprocess.run(['qsub', '-N', "MD" + sample_name, script_name, sample_name, ancestor_name])
 
 def get_sample_names(directory):
     # Get all R1 sample files
@@ -180,7 +180,7 @@ def main():
     # Prompt user for what they want the SEQID to be
     user_input_SEQID = input("What would you like your SEQID to be? (this could be your project name): ")
     auto_gen_script_vars.append(f"SEQID={user_input_SEQID} # Project name and date for bam header")
-    auto_gen_script_vars.append("REF=${DIR}/genomes/sacCer3.fasta # Reference genome")
+    auto_gen_script_vars.append("REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome")
     auto_gen_script_vars.append("SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory")
 
     if set(script_variables) != set(auto_gen_script_vars):
