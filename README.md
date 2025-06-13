@@ -71,6 +71,38 @@ Here, we will need to change some of the working directories in the align script
 $ python3 batch_submit.py
 ```
 Next you will see this popup:
+
+```
+Current Bash Settings for scripts:
+#$ -S /bin/bash
+
+#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
+
+#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
+
+#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
+
+#$ -l mfree=8G
+
+#$ -l h_rt=36:0:0
+
+
+**NEW** Bash Settings for scripts:
+#$ -S /bin/bash
+
+#$ -wd /net/dunham/vol2/Leah/labmeeting_250613
+
+#$ -o /net/dunham/vol2/Leah/labmeeting_250613/outputs/
+
+#$ -e /net/dunham/vol2/Leah/labmeeting_250613/errors/
+
+#$ -l mfree=8G
+
+#$ -l h_rt=36:0:0
+
+Change your SGE Directives to fit your directories? (y/n) :
+```
+Then this:
 ```
 Current Script Variables:
 FOLDER=fastq
