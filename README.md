@@ -1,7 +1,9 @@
-# Exp_evo_variant_calling
+# exp_evo_variant_calling
 The experimental evolution variant calling pipeline is a set of bash and python scripts that process sample data in the form of fastq files into annotated vcf files containing potential variants from one's experiments. 
+*Authors: Zilong Zeng and Leah Anderson, 2025*
+
 ## Installation
-First, ssh onto the GS cluster. 
+First, log onto the GS cluster: 
 ```php
 ssh username@nexus.gs.washington.edu
 ```
@@ -205,7 +207,7 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
 └── WorkDirectory
         ├── my_ancestor_sample
         └── sample1  *NEW*
-            ├── sample1_final_stringent_compiled.csv       
+            ├── sample1_final_stringent_compiled.txt      
             ├── sample1_freebayes_BCBio_AncFiltered_annotated_vcf.txt
             ├── sample1_freebayes_BCBio_AncFiltered_condensed.csv
             ├── sample1_lofreq_AncFiltered_annotated_vcf.txt
@@ -220,7 +222,7 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
 
 - For example, we set our Gatk4 filter to have a default `QUAL` threshold of 125, so any variants under 125 for the `QUAL` would not make it into the `samtools_AB_AncFiltered_condensed.csv`. Our Freebayes filter on the other hand has a `QUAL` threshold of 20.
 
-- The `final_stringent_compiled.csv` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.csv`, `lofreq_AncFiltered_condense.csv`, and `samtools_AB_AncFiltered_condensed.csv` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers. 
+- The `final_stringent_compiled.txt` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.csv`, `lofreq_AncFiltered_condense.csv`, and `samtools_AB_AncFiltered_condensed.csv` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers. 
 
 Below is a pipeline of how these file output files are generated. 
 ```
