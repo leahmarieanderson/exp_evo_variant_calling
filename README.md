@@ -1,5 +1,6 @@
 # exp_evo_variant_calling
 The experimental evolution variant calling pipeline is a set of bash and python scripts that process sample data in the form of fastq files into annotated vcf files containing potential variants from one's experiments. 
+
 *Authors: Zilong Zeng and Leah Anderson, 2025*
 
 ## Installation
