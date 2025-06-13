@@ -29,7 +29,7 @@ module load freebayes/1.3.6
 module load fastqc/0.12.1
 
 
-FOLDER=test_fastq
+FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
 DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
@@ -68,7 +68,7 @@ if [ -n "$2" ]; then
 fi
 
 # Sets up folder structure
-# mkdir -p ${WORKDIR}/${SAMPLE}
+mkdir -p ${WORKDIR}/${SAMPLE}
 cd ${WORKDIR}/${SAMPLE}
 
 # Perform FastQC checks on our samples 
