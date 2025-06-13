@@ -2,11 +2,11 @@ import csv
 import argparse
 import os
 
-# filter values for a samtools called file
-ST_QUAL_THRES = 70
-ST_DP_THRES = 35
-ST_Non_Coding_QUAL_THRES = 175
-ST_Telomere_QUAL_THRES = 200
+# filter values for a gatk called file
+GATK_QUAL_THRES = 125
+GATK_DP_THRES = 35
+GATK_Non_Coding_QUAL_THRES = 250
+GATK_Telomere_QUAL_THRES = 500
 
 # filter values for a freebayes called file
 FB_QUAL_THRES = 20
@@ -18,7 +18,7 @@ FB_Telomere_QUAL_THRES = 650
 LOFREQ_QUAL_THRES = 20
 LOFREQ_DP_THRES = 20
 LOFREQ_Non_Coding_QUAL_THRES = 40
-LOFREQ_Telomere_QUAL_THRES = 60
+LOFREQ_Telomere_QUAL_THRES = 80
 
 non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron"]
 
@@ -29,11 +29,11 @@ def caller_filter(caller_name, input_file, output_file):
     caller_NC_QUAL_THRES = 0
     caller_TELOMERE_QUAL_THRES = 0
     # set filters to corresponding values according to their caller_name
-    if caller_name == "samtools":
-        caller_QUAL_THRES = ST_QUAL_THRES
-        caller_DP_THRES = ST_DP_THRES
-        caller_NC_QUAL_THRES = ST_Non_Coding_QUAL_THRES
-        caller_TELOMERE_QUAL_THRES = ST_Telomere_QUAL_THRES
+    if caller_name == "gatk":
+        caller_QUAL_THRES = GATK_QUAL_THRES
+        caller_DP_THRES = GATK_DP_THRES
+        caller_NC_QUAL_THRES = GATK_Non_Coding_QUAL_THRES
+        caller_TELOMERE_QUAL_THRES = GATK_Telomere_QUAL_THRES
     elif caller_name == "freebayes":
         caller_QUAL_THRES = FB_QUAL_THRES
         caller_DP_THRES = FB_DP_THRES
@@ -71,26 +71,18 @@ def caller_filter(caller_name, input_file, output_file):
             anno = row_dict['ANNOTATION']
             dp = None
             
-            # filter based on values that we decided worked best for samtools
-            if caller_name == "samtools":
+            # filter based on values that we decided worked best for gatk
+            if caller_name == "gatk":
                 mq = None
-                ref_for = None # DP4[0] in the vcf
-                ref_rev = None # DP4[1] in the vcf
-                alt_for = None # DP4[2] in the vcf
-                alt_rev = None # DP4[3] in the vcf
-
+                sor = None
                 # Parse DP from INFO field since INFO field contains many variables
                 for entry in info.split(';'):
                     
                     if entry.startswith('DP='): # get DP
                         dp = float(entry.split('=')[1])
                     
-                    if entry.startswith('DP4='):
-                        values = entry[4:]
-                        ref_for = float(values.split(',')[0]) # get DP4[0] 
-                        ref_rev = float(values.split(',')[1]) # get DP4[1]
-                        alt_for = float(values.split(',')[2]) # get DP4[2]
-                        alt_rev = float(values.split(',')[3]) # get DP4[3]
+                    if entry.startswith('SOR='):
+                        sor = float(entry.split('=')[1])
                     
                     if entry.startswith('MQ='): # get MQ
                         mq = float(entry.split('=')[1])
@@ -99,32 +91,26 @@ def caller_filter(caller_name, input_file, output_file):
                 if anno not in non_gff_annonations:
                     # If telomere, then use the telomere qual value threshold
                     if anno == "telomere":
-                        if (all(val is not None for val in [dp, mq, ref_for, ref_rev, alt_for, alt_rev]) 
+                        if (all(val is not None for val in [mq, sor, dp]) 
                             and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mq > 30 and (alt_for + alt_rev) > 4 
-                            and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
-                            and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
+                            and mq > 30 and sor < 3
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
                     else: 
                         # Apply stringent filters since it is non-coding
-                        if (all(val is not None for val in [dp, mq, ref_for, ref_rev, alt_for, alt_rev]) 
+                        if (all(val is not None for val in [mq, sor, dp]) 
                             and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mq > 30 and (alt_for + alt_rev) > 4 
-                            and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 
-                            and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01
+                            and mq > 30 and sor < 3
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
                 else: # it's coding, just apply regular stringent filter based on the type of caller was used
-                    if (all(val is not None for val in [dp, mq, ref_for, ref_rev, alt_for, alt_rev])  # all variables aren't None
+                    if (all(val is not None for val in [mq, sor, dp])  # all variables aren't None
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES  # greater than or equal to our QUAL and DP thresholds
-                        and mq > 30 and (alt_for + alt_rev) >= 4  # Mapping Quality is higher than 30 and alt read depth greater than 4 on both forward and reverse combined
-                        and ((ref_for + alt_for)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 # percentage of forward read depth greater than 1 percent
-                        and ((ref_rev + alt_rev)/(ref_for + ref_rev + alt_for + alt_rev)) > 0.01 # percentage of reverse read depth greater than 1 percent
+                        and mq > 30 and sor < 3
                         ):
                         # Create a filtered row with only the selected columns
                         filtered_row = [row_dict[col] for col in filtered_fieldnames]
@@ -133,7 +119,7 @@ def caller_filter(caller_name, input_file, output_file):
             # else if caller name is "freebayes", then we will filter on values we decided is best for freebayes
             elif caller_name == "freebayes":
                 mqm = None # Mapping Quality Mean of Alt Alleles
-                srf = None # Number of reference observations on the forward strand, same as samtools DP[0] just different name
+                srf = None # Number of reference observations on the forward strand, same as gatk DP[0] just different name
                 srr = None # Number of reference observations on the reverse strand
                 saf = None # Number of alternate observations on the forward strand
                 sar = None # Number of alternate observations on the reverse strand
@@ -271,11 +257,11 @@ def filter_vcf(input_file):
             # First, find the type of caller used for the input file
             if line.startswith("##"):
                 # Set up filter according to the caller used
-                if "samtools" in line: 
-                    caller_name = "samtools"
-                elif "freebayes" in line: 
+                if "haplotypecaller" in line.lower(): 
+                    caller_name = "gatk"
+                elif "freebayes" in line.lower(): 
                     caller_name = "freebayes"
-                elif "lofreq" in line:
+                elif "lofreq" in line.lower():
                     caller_name = "lofreq"
             else: # just append the line (which should be data and not a comment) into the list
                 if(line.startswith("#CHROM")): # just remove the '#' character from the start of our header line
@@ -346,14 +332,14 @@ def main(all_file_names):
     
     # Input CSV files
     csv_files = {
-        "samtools": "",
+        "gatk": "",
         "freebayes": "",
         "lofreq": ""
     }
 
     for file in converted_files:
-        if "samtools" in file:
-            csv_files["samtools"] = file
+        if "gatk" in file:
+            csv_files["gatk"] = file
         elif "freebayes" in file:
             csv_files["freebayes"] = file
         elif "lofreq" in file:
@@ -375,7 +361,7 @@ def main(all_file_names):
                 if key not in variant_dict:
                     variant_dict[key] = {
                         "NUM_OCCURRENCES": 0,
-                        "QUAL_samtools": None,
+                        "QUAL_gatk": None,
                         "QUAL_freebayes": None,
                         "QUAL_lofreq": None
                     }
@@ -391,7 +377,7 @@ def main(all_file_names):
     # Write the combined CSV output
     with open(temp, "w", newline="") as f:
         fieldnames = ["CHROM", "POS", "REF", "ALT", "ANNOTATION", "REGION", "PROTEIN", 
-                    "NUM_OCCURRENCES", "QUAL_samtools", "QUAL_freebayes", "QUAL_lofreq"]
+                    "NUM_OCCURRENCES", "QUAL_gatk", "QUAL_freebayes", "QUAL_lofreq"]
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
         
@@ -400,7 +386,7 @@ def main(all_file_names):
                 "CHROM": CHROM, "POS": POS, "REF": REF, "ALT": ALT, 
                 "ANNOTATION": ANNOTATION, "REGION": REGION, "PROTEIN": PROTEIN,
                 "NUM_OCCURRENCES": values["NUM_OCCURRENCES"],
-                "QUAL_samtools": values["QUAL_samtools"],
+                "QUAL_gatk": values["QUAL_gatk"],
                 "QUAL_freebayes": values["QUAL_freebayes"],
                 "QUAL_lofreq": values["QUAL_lofreq"]
             })
