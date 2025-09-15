@@ -24,7 +24,7 @@ SIZE=$2
 DIR=/net/dunham/vol2/Leah/labmeeting_250613
 WORKDIR=${DIR}/WorkDirectory
 BAMDIR=${WORKDIR}/${SAMPLE}
-CNDIR=${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp  #CHANGE back to ${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp
+CNDIR=${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp
 SCRIPTS=${DIR}/exp_evo_variant_calling
 REF=/net/dunham/vol2/Caiti/reference_seq/sacCer3.fasta
 PLOIDY=$3  
@@ -51,6 +51,7 @@ java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQua
 java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQuality 0 \
     ${BAMDIR}/${SAMPLE}_R1R2_MD.sort.bam \
     ${CNDIR}/${SAMPLE}_${SIZE}bp.All.wig ${REF}
+
 python ${SCRIPTS}/wigNormalizedToAverageReadDepth_MapQ_ForPlot.py \
     ${CNDIR}/${SAMPLE}_R1R2_MD.sort.bam.DOC.sample_summary \
     ${CNDIR}/${SAMPLE}_${SIZE}bp.wig \
@@ -109,4 +110,11 @@ else
 		Rscript ${SCRIPTS}/PlotCopyNumber_TwoSample_20200106.R ${WORKDIR} ${SAMPLE} ${SIZE} ${ANC} 
 	fi
 fi
+
+
+# copy the CNV graphs to a designated directory
+mkdir -p ${DIR}/CNV_graphs/${SAMPLE}
+cd ${WORKDIR}/${SAMPLE}
+cp *bp.pdf ${DIR}/CNV_graphs/${SAMPLE}
+
 
