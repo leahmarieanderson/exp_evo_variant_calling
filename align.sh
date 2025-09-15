@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
-#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
-#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
+#$ -wd /net/dunham/vol2/Leah/labmeeting_250613
+#$ -o /net/dunham/vol2/Leah/labmeeting_250613/outputs/
+#$ -e /net/dunham/vol2/Leah/labmeeting_250613/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
@@ -32,12 +32,12 @@ module load fastqc/0.12.1
 FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
+DIR=/net/dunham/vol2/Leah/labmeeting_250613
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=leah_freeze_evolution # Project name and date for bam header
-REF=${SCRIPTS}/genomes/sacCer3.fasta # Reference genome
+SEQID=leah-labmeeting # Project name and date for bam header
+REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
 VCFDIR=${WORKDIR}/${ANC}
