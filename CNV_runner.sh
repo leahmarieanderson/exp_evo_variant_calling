@@ -109,9 +109,9 @@ else
 fi
 
 
-# copy the CNV graphs to a designated directory
-mkdir -p ${DIR}/CNV_graphs/${SAMPLE}
+# copy the CNV graphs directly to the main CNV_graphs directory
+mkdir -p ${DIR}/CNV_graphs
 cd ${WORKDIR}/${SAMPLE}
-cp *bp.pdf ${DIR}/CNV_graphs/${SAMPLE}
+cp *bp.pdf ${DIR}/CNV_graphs/
 
 
