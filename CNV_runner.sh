@@ -1,9 +1,6 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/labmeeting_250613
-#$ -o /net/dunham/vol2/Leah/labmeeting_250613/outputs/
-#$ -e /net/dunham/vol2/Leah/labmeeting_250613/errors/
-#$ -N labMeeting1
+# Working directory, output, error paths, and job name now set by batch submit script
 #$ -l mfree=4G
 
 ## CNV pipeline for figuring out CN from bam files: uses both wig file from igvtools and mpileup
