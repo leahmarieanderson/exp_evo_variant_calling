@@ -18,11 +18,11 @@ IGVTOOLS=/net/dunham/vol2/Caiti/hybrid_seq/IGVTools/igvtools.jar
 
 SAMPLE=$1 #sample prefix (ex: Sample-01)
 SIZE=$2
-DIR=/net/dunham/vol2/Leah/labmeeting_250613
+DIR=$PWD  # Current working directory set by qsub -wd (where data files live)
 WORKDIR=${DIR}/WorkDirectory
 BAMDIR=${WORKDIR}/${SAMPLE}
 CNDIR=${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp
-SCRIPTS=${DIR}/exp_evo_variant_calling
+SCRIPTS=${SGE_O_WORKDIR}  # Directory where qsub was submitted from (where scripts are)
 REF=/net/dunham/vol2/Caiti/reference_seq/sacCer3.fasta
 PLOIDY=$3  
 ANC=$4
