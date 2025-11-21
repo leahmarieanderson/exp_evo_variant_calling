@@ -2,6 +2,7 @@
 #$ -S /bin/bash
 # Working directory, output, error paths, and job name now set by batch submit script
 #$ -l mfree=4G
+#$ -l h_rt=7:00
 
 ## CNV pipeline for figuring out CN from bam files: uses both wig file from igvtools and mpileup
 
@@ -33,7 +34,7 @@ mkdir -p CNV_new_${SIZE}bp
 
 ## Get depth of coverage info (old version ran this on earlier bam). Ignores mito
 java -Xmx2g -jar $GATK_DIR/GenomeAnalysisTK.jar -T DepthOfCoverage \
-	-R ${REF} -I ${BAMDIR}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam \
+	-R ${REF} -I ${BAMDIR}/${SAMPLE}_R1R2_MD.sort.bam \
 	-o ${CNDIR}/${SAMPLE}_R1R2_MD.sort.bam.DOC \
 	-XL chrM -omitBaseOutput -omitLocusTable -omitIntervals -rf BadCigar
 
@@ -41,12 +42,12 @@ java -Xmx2g -jar $GATK_DIR/GenomeAnalysisTK.jar -T DepthOfCoverage \
 ## Can change window size
 # Make a wig file with data that satisfies the minimum mapping quality 
 java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQuality 30 \
-	${BAMDIR}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam \
+	${BAMDIR}/${SAMPLE}_R1R2_MD.sort.bam \
 	${CNDIR}/${SAMPLE}_${SIZE}bp.wig ${REF}
 
 # Make the wig file that contains everything
 java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQuality 0 \
-    ${BAMDIR}/${SAMPLE}_comb_R1R2.RG.MD.realign.sort.bam \
+    ${BAMDIR}/${SAMPLE}_R1R2_MD.sort.bam \
     ${CNDIR}/${SAMPLE}_${SIZE}bp.All.wig ${REF}
 
 python ${SCRIPTS}/wigNormalizedToAverageReadDepth_MapQ_ForPlot.py \
@@ -76,16 +77,16 @@ else
 		# Creating Ancestor Wig files
 
 		java -Xmx2g -jar $GATK_DIR/GenomeAnalysisTK.jar -T DepthOfCoverage \
-			-R ${REF} -I ${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
+			-R ${REF} -I ${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam \
 			-o ${WORKDIR}/${ANC}/CNV_new_${SIZE}bp/${ANC}_R1R2_MD.sort.bam.DOC \
 			-XL chrM -omitBaseOutput -omitLocusTable -omitIntervals -rf BadCigar
 
 		java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQuality 30 \
-			${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
+			${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam \
 			${WORKDIR}/${ANC}/CNV_new_${SIZE}bp/${ANC}_${SIZE}bp.wig ${REF}
 
 		java -Xmx2g -Djava.awt.headless=true -jar $IGVTOOLS count -w ${SIZE} --minMapQuality 0 \
-			${WORKDIR}/${ANC}/${ANC}_comb_R1R2.RG.MD.realign.sort.bam \
+			${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam \
 			${WORKDIR}/${ANC}/CNV_new_${SIZE}bp/${ANC}_${SIZE}bp.All.wig ${REF}
 
 		python ${SCRIPTS}/wigNormalizedToAverageReadDepth_MapQ_ForPlot.py \
@@ -113,5 +114,4 @@ fi
 mkdir -p ${DIR}/CNV_graphs
 cd ${WORKDIR}/${SAMPLE}
 cp *bp.pdf ${DIR}/CNV_graphs/
-
 
