@@ -2,7 +2,7 @@
 #$ -S /bin/bash
 # Working directory, output, error paths, and job name now set by batch submit script
 #$ -l mfree=4G
-#$ -l h_rt=7:00
+#$ -l h_rt=36:0:0
 
 ## CNV pipeline for figuring out CN from bam files: uses both wig file from igvtools and mpileup
 
