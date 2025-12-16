@@ -149,6 +149,8 @@ Next, align your ancestor by submitting a job to the cluster with `qsub`:
 ```
 $ qsub align.sh my_ancestor_strain
 ```
+*Note: do not include the whole fastq file name, just the prefix. For example: if your forward read file is "MD4406_S2_R1_001.fastq.gz", then your sample name is "MD4406_S2".*
+
 This may take up to 2 hours to complete, depending on the size of your fastq. You need to wait for the entire job to complete before moving onto the next step.
 After you finished qsub-ing, you can check on the status of your job by using the `qstat -u username` command in the terminal.  
 
