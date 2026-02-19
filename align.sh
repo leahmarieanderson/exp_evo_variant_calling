@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/labmeeting_250613
-#$ -o /net/dunham/vol2/Leah/labmeeting_250613/outputs/
-#$ -e /net/dunham/vol2/Leah/labmeeting_250613/errors/
+#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
+#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
+#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
@@ -29,15 +29,15 @@ module load freebayes/1.3.6
 module load fastqc/0.12.1
 
 
-FOLDER=fastq
+FOLDER=long_fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Leah/labmeeting_250613
+DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=leah-labmeeting # Project name and date for bam header
-REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
+SEQID=denovo-testing # Project name and date for bam header
+REF=${DIR}/denovo_assembly_yeast/ragtag_MD4612_anc/  # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
 VCFDIR=${WORKDIR}/${ANC}
@@ -196,6 +196,12 @@ if [ -n "$2" ]; then
         ${SAMPLE}_gatk_haplo_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
+
+        python3 ${SCRIPTS}/makeBED.py \
+                -i ${SAMPLE}_final_stringent_compiled.txt \
+                -o1 ${SAMPLE}_final_stringent_compiled_3callers.bed \
+                -o2 ${SAMPLE}_final_stringent_compiled_2callers.bed \
+                -o3 ${SAMPLE}_final_stringent_compiled_1caller.bed
 
         # remove all the lofreq intermediate files
         rm ${SAMPLE}_lofreq_normal_relaxed.log
