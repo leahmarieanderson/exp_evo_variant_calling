@@ -1,10 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/labmeeting_250613
-#$ -o /net/dunham/vol2/Leah/labmeeting_250613/outputs/
-#$ -e /net/dunham/vol2/Leah/labmeeting_250613/errors/
-#$ -N labMeeting1
+# Working directory, output, error paths, and job name now set by batch submit script
 #$ -l mfree=4G
+#$ -l h_rt=36:0:0
 
 ## CNV pipeline for figuring out CN from bam files: uses both wig file from igvtools and mpileup
 
@@ -21,11 +19,11 @@ IGVTOOLS=/net/dunham/vol2/Caiti/hybrid_seq/IGVTools/igvtools.jar
 
 SAMPLE=$1 #sample prefix (ex: Sample-01)
 SIZE=$2
-DIR=/net/dunham/vol2/Leah/labmeeting_250613
+DIR=$PWD  # Current working directory set by qsub -wd (where data files live)
 WORKDIR=${DIR}/WorkDirectory
 BAMDIR=${WORKDIR}/${SAMPLE}
 CNDIR=${WORKDIR}/${SAMPLE}/CNV_new_${SIZE}bp
-SCRIPTS=${DIR}/exp_evo_variant_calling
+SCRIPTS=${SGE_O_WORKDIR}  # Directory where qsub was submitted from (where scripts are)
 REF=/net/dunham/vol2/Caiti/reference_seq/sacCer3.fasta
 PLOIDY=$3  
 ANC=$4
@@ -112,9 +110,8 @@ else
 fi
 
 
-# copy the CNV graphs to a designated directory
-mkdir -p ${DIR}/CNV_graphs/${SAMPLE}
+# copy the CNV graphs directly to the main CNV_graphs directory
+mkdir -p ${DIR}/CNV_graphs
 cd ${WORKDIR}/${SAMPLE}
-cp *bp.pdf ${DIR}/CNV_graphs/${SAMPLE}
-
+cp *bp.pdf ${DIR}/CNV_graphs/
 
