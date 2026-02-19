@@ -311,11 +311,24 @@ def sort_csv(csv_name):
         reader = csv.DictReader(infile, delimiter='\t')
         rows = list(reader)
 
-        # Sort the rows based on 'CHROM' and 'POS'
-        rows_sorted = sorted(rows, key=lambda x: (chromosome_conversion(x['CHROM']), int(x['POS'])))
+        # Sort priority:
+        # 1) NUM_OCCURRENCES (descending)
+        # 2) CHROM (custom chromosome order)
+        # 3) POS (ascending)
+        rows_sorted = sorted(
+            rows,
+            key=lambda x: (
+                -int(x['NUM_OCCURRENCES']),
+                chromosome_conversion(x['CHROM']),
+                int(x['POS'])
+            )
+        )
 
-        # Write the sorted rows to a new tab-delimited CSV file
-        final_result_name = csv_name.replace('all_condensed.txt','final_stringent_compiled.txt')
+        final_result_name = csv_name.replace(
+            'all_condensed.txt',
+            'final_stringent_compiled.txt'
+        )
+
         with open(final_result_name, 'w', newline='') as outfile:
             fieldnames = reader.fieldnames
             writer = csv.DictWriter(outfile, fieldnames=fieldnames, delimiter='\t')

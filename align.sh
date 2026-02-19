@@ -29,7 +29,7 @@ module load freebayes/1.3.6
 module load fastqc/0.12.1
 
 
-FOLDER=fastq
+FOLDER=long_fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
 DIR=/net/dunham/vol2/Leah/sequencing_251118
@@ -228,6 +228,12 @@ if [ -n "$2" ]; then
         ${SAMPLE}_gatk_haplo_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
+
+        python3 ${SCRIPTS}/makeBED.py \
+                -i ${SAMPLE}_final_stringent_compiled.txt \
+                -o1 ${SAMPLE}_final_stringent_compiled_3callers.bed \
+                -o2 ${SAMPLE}_final_stringent_compiled_2callers.bed \
+                -o3 ${SAMPLE}_final_stringent_compiled_1caller.bed
 
         # remove all the lofreq intermediate files
         rm ${SAMPLE}_lofreq_normal_relaxed.log
