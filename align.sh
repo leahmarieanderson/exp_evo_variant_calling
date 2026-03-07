@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/sequencing_251118
-#$ -o /net/dunham/vol2/Leah/sequencing_251118/outputs/
-#$ -e /net/dunham/vol2/Leah/sequencing_251118/errors/
+#$ -wd /net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff
+#$ -o /net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff/outputs/
+#$ -e /net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
@@ -29,14 +29,14 @@ module load freebayes/1.3.6
 module load fastqc/0.12.1
 
 
-FOLDER=long_fastq
+FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Leah/sequencing_251118
+DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=nov20 # Project name and date for bam header
+SEQID=rereun_mhs_samples # Project name and date for bam header
 REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam

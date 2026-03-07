@@ -285,13 +285,6 @@ def filter_vcf(input_file):
     # return name of converted file
     return csv_name
 
-# helper function to isolate sample name from file name
-def find_second_underscore(s):
-    first_index = s.find('_')
-    if first_index == -1:
-        return -1  # No underscores found
-    second_index = s.find('_', first_index + 1)
-    return second_index
 
 # function that helps convert CHROM column strings to ints for sorting
 def chromosome_conversion(chrom_number):
@@ -383,8 +376,12 @@ def main(all_file_names):
                 variant_dict[key]["NUM_OCCURRENCES"] += 1
                 variant_dict[key][f"QUAL_{source}"] = row["QUAL"]
 
-    sample_name_end_index = find_second_underscore(converted_files[0])
-    sample_name = converted_files[0][:sample_name_end_index]
+    sample_name = converted_files[0]
+    for caller in ["gatk", "freebayes", "lofreq"]:
+        suffix = f"_{caller}_condensed.txt"
+        if sample_name.endswith(suffix):
+            sample_name = sample_name[:-len(suffix)]
+            break
 
     temp = sample_name + '_all_condensed.txt' # make a temp csv file name
     # Write the combined CSV output
