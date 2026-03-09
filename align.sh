@@ -36,8 +36,8 @@ DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=denovo-testing # Project name and date for bam header
-REF=${DIR}/denovo_assembly_yeast/ragtag_MD4612_anc/  # Reference genome
+SEQID=SNP-testing # Project name and date for bam header
+REF=${SCRIPTS}/genomes/sacCer3.fasta  # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
 VCFDIR=${WORKDIR}/${ANC}
@@ -100,23 +100,6 @@ samtools flagstat ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam
 # Remove intermediate files
 rm ${SAMPLE}_R1R2.sam
 
-# for now, we don't know the known sites for variants for our yeast, so we will skip this step
-# (>&2 echo ***GATK4 - BaseRecalibrator***)
-
-# 1. build the model
-#gatk BaseRecalibrator \
-#        -I ${SAMPLE}_R1R2_MD.sort.bam \
-#        -R ${REF} --known-sites ${known_sites} \
-#        -O ${SAMPLE}_recal_data.table
-
-
-# 2. Apply the model to adjust the base quality scores
-#gatk ApplyBQSR \
-#        -I ${SAMPLE}_R1R2_MD.sort.bam \
-#        -R ${REF} 
-#        --bqsr-recal-file ${SAMPLE}_recal_data.table 
-#        -O ${SAMPLE}_R1R2_MD.sort.bqrs.bam
-
 (>&2 echo ***GATK4 - Calling Variants***)
 gatk HaplotypeCaller \
      -R ${REF} \
@@ -146,13 +129,13 @@ if [ -n "$2" ]; then
         (>&2 echo ***Bedtools - Intersect***)
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo.vcf \
-                -b ${VCFDIR}/${ANC}_gatk_haplo_quality_filter.vcf \
+                -b ${VCFDIR}/${ANC}_gatk_haplo.vcf \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered.vcf
 
         # Filters freebayes by ancestor 
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
-                -b ${VCFDIR}/${ANC}_freebayes_BCBio_quality_filter.vcf \
+                -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
 
         # Filters lofreq by ancestor
@@ -197,6 +180,7 @@ if [ -n "$2" ]; then
         ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
 
+        (>&2 echo ***Make BED Files to view in IGV***)
         python3 ${SCRIPTS}/makeBED.py \
                 -i ${SAMPLE}_final_stringent_compiled.txt \
                 -o1 ${SAMPLE}_final_stringent_compiled_3callers.bed \
@@ -238,4 +222,6 @@ bcftools filter -O v -o ${SAMPLE}_gatk_haplo_quality_filter.vcf \
 bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_quality_filter.vcf \
         -i 'MQM>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
         ${SAMPLE}_freebayes_BCBio.vcf
+
+(>&2 echo ***Ancestor Quality Filter completed***)
 fi
