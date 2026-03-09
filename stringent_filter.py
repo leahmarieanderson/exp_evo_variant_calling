@@ -377,8 +377,9 @@ def main(all_file_names):
                 variant_dict[key][f"QUAL_{source}"] = row["QUAL"]
 
     sample_name = converted_files[0]
-    for caller in ["gatk", "freebayes", "lofreq"]:
-        suffix = f"_{caller}_condensed.txt"
+    for suffix in ["_gatk_haplo_AncFiltered_condensed.txt",
+                   "_freebayes_BCBio_AncFiltered_condensed.txt",
+                   "_lofreq_AncFiltered_condensed.txt"]:
         if sample_name.endswith(suffix):
             sample_name = sample_name[:-len(suffix)]
             break
