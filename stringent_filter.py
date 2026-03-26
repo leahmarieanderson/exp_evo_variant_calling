@@ -4,7 +4,7 @@ import os
 
 # filter values for a gatk called file
 GATK_QUAL_THRES = 125
-GATK_DP_THRES = 35
+GATK_DP_THRES = 10
 GATK_Non_Coding_QUAL_THRES = 250
 GATK_Telomere_QUAL_THRES = 500
 
@@ -16,7 +16,7 @@ FB_Telomere_QUAL_THRES = 650
 
 # filter values for a lofreq called file
 LOFREQ_QUAL_THRES = 20
-LOFREQ_DP_THRES = 20
+LOFREQ_DP_THRES = 10
 LOFREQ_Non_Coding_QUAL_THRES = 40
 LOFREQ_Telomere_QUAL_THRES = 80
 
@@ -75,6 +75,8 @@ def caller_filter(caller_name, input_file, output_file):
             if caller_name == "gatk":
                 mq = None
                 sor = None
+                is_indel = len(row_dict['REF']) != len(row_dict['ALT'])
+                sor_threshold = 10 if is_indel else 3
                 # Parse DP from INFO field since INFO field contains many variables
                 for entry in info.split(';'):
                     
@@ -93,7 +95,7 @@ def caller_filter(caller_name, input_file, output_file):
                     if anno == "telomere":
                         if (all(val is not None for val in [mq, sor, dp]) 
                             and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mq > 30 and sor < 3
+                            and mq > 30 and sor < sor_threshold
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
@@ -102,7 +104,7 @@ def caller_filter(caller_name, input_file, output_file):
                         # Apply stringent filters since it is non-coding
                         if (all(val is not None for val in [mq, sor, dp]) 
                             and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mq > 30 and sor < 3
+                            and mq > 30 and sor < sor_threshold
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
@@ -110,7 +112,7 @@ def caller_filter(caller_name, input_file, output_file):
                 else: # it's coding, just apply regular stringent filter based on the type of caller was used
                     if (all(val is not None for val in [mq, sor, dp])  # all variables aren't None
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES  # greater than or equal to our QUAL and DP thresholds
-                        and mq > 30 and sor < 3
+                        and mq > 30 and sor < sor_threshold
                         ):
                         # Create a filtered row with only the selected columns
                         filtered_row = [row_dict[col] for col in filtered_fieldnames]
