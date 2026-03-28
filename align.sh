@@ -155,9 +155,15 @@ VCFDIR=${WORKDIR}/${ANC}
 #      -I ${SAMPLE}_R1R2_MD.sort.bam \
 #      -O ${SAMPLE}_gatk_haplo.vcf
 
-# # Freebayes with a lot of arguments for population calling
+# # Freebayes
+# # Haplotype length of 0 means that it will not attempt to call haplotypes and will just call variants independently. 
+# # This is important for our yeast data since we have a lot of low frequency variants and we don't want to miss them by trying to call haplotypes. 
+# # The --pooled-continuous argument allows freebayes to call variants in pooled samples and report allele frequencies instead of genotypes. 
+# # The --report-genotype-likelihood-max argument reports the maximum genotype likelihoods for each variant, which can be useful for filtering later on. 
+# # The --allele-balance-priors-off argument turns off the default priors for allele balance, which can be helpful for calling variants in pooled samples where the allele balance may not follow the expected distribution. 
+# # The --min-alternate-fraction 0.1 argument sets a minimum threshold for the alternate allele fraction, which can help reduce false positives from sequencing errors.
 # freebayes -f ${REF} \
-#         --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
+#         --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 --haplotype-length 0 \
 #         ${SAMPLE}_R1R2_MD.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
 # # Requires ANC from this line down
