@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
-#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
-#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
+#$ -wd /net/dunham/vol2/Leah/sequencing_251118
+#$ -o /net/dunham/vol2/Leah/sequencing_251118/outputs/
+#$ -e /net/dunham/vol2/Leah/sequencing_251118/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
@@ -32,12 +32,12 @@ module load fastqc/0.12.1
 FOLDER=long_fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
+DIR=/net/dunham/vol2/Leah/sequencing_251118
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=SNP-testing # Project name and date for bam header
-REF=${SCRIPTS}/genomes/sacCer3.fasta  # Reference genome
+SEQID=nov20 # Project name and date for bam header
+REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
 VCFDIR=${WORKDIR}/${ANC}
@@ -47,22 +47,23 @@ VCFDIR=${WORKDIR}/${ANC}
 # provide the correct file path for ANC
 
 # Checks first if ANC name is provided in arguments
-if [ -n "$2" ]; then 
+if [ -n "$2" ]; then
         # Check if a file exists in the 'fastq' directory and contains ${ANC} in its name
-        if find "$DIR/$FOLDER" -type f -name "${ANC}_*" | grep -q .; then
+        # Look for both paired-end (.fastq.gz) and single-end (.fastq.zip) patterns
+        if find "$DIR/$FOLDER" -type f \( -name "${ANC}_*" -o -name "${ANC}*.fastq.zip" \) | grep -q .; then
             (>&2 echo A fastq file with sample name ${ANC} exists in the ${FOLDER} directory.)
             # Check to see if ancestor.bam does not exists
             if [ ! -e ${ANCBAM} ]; then
             # Throw a warning that we cannot find the Ancestor bam and exit the shell script.
                 (>&2 echo ***${ANCBAM} cannot be found***)
                 (>&2 echo ***Need to create Ancestor bam or modify path***)
-                exit 1 
+                exit 1
             fi
         else
             (>&2 echo No fastq file with sample name ${ANC} was found in the ${FOLDER} directory.)
             (>&2 echo Possible misspelling of ancestor sample name or misplaced ancestor fastq file)
             (>&2 echo 'Check your fastq folder or double check that you did not misspell')
-            # exit out 
+            # exit out
             exit 1
         fi
 fi
@@ -71,18 +72,49 @@ fi
 mkdir -p ${WORKDIR}/${SAMPLE}
 cd ${WORKDIR}/${SAMPLE}
 
-# Perform FastQC checks on our samples 
+# Perform FastQC checks on our samples
 (>&2 echo ***FASTQC on SAMPLE ***)
-fastqc ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
-fastqc ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
 
-# remove the zip file since the html file has everything we need to know
-rm ${SAMPLE}_*R1*fastqc.zip
-rm ${SAMPLE}_*R2*fastqc.zip
+# Check for different FASTQ file patterns
+if ls ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz 1> /dev/null 2>&1; then
+    # Paired-end .fastq.gz files
+    FASTQ_TYPE="paired_gz"
+    fastqc ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
+    fastqc ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
+    # remove the zip file since the html file has everything we need to know
+    rm ${SAMPLE}_*R1*fastqc.zip
+    rm ${SAMPLE}_*R2*fastqc.zip
+elif ls ${SEQDIR}/${SAMPLE}*.fastq.zip 1> /dev/null 2>&1; then
+    # Single-end .fastq.zip files - need to extract first
+    FASTQ_TYPE="single_zip"
+    # Extract the zip file
+    unzip -o ${SEQDIR}/${SAMPLE}*.fastq.zip -d ${SEQDIR}/
+    # Find the extracted fastq file
+    EXTRACTED_FASTQ=$(find ${SEQDIR}/ -name "${SAMPLE}*.fastq" -type f | head -1)
+    if [ -z "$EXTRACTED_FASTQ" ]; then
+        echo "Error: Could not find extracted FASTQ file for ${SAMPLE}"
+        exit 1
+    fi
+    fastqc ${EXTRACTED_FASTQ} -o ${WORKDIR}/${SAMPLE}/
+    # remove the fastqc zip file
+    rm ${SAMPLE}*fastqc.zip
+else
+    echo "Error: Could not find FASTQ files for sample ${SAMPLE}"
+    echo "Looking for either ${SAMPLE}_*R1*.fastq.gz and ${SAMPLE}_*R2*.fastq.gz"
+    echo "or ${SAMPLE}*.fastq.zip"
+    exit 1
+fi
 
 # Align reads with bwa
 (>&2 echo ***BWA - mem -R***)
-bwa mem -R "@RG\tID:${SEQID}\tSM:${SAMPLE}\tLB:1" ${REF} ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz > ${SAMPLE}_R1R2.sam
+
+if [ "$FASTQ_TYPE" = "paired_gz" ]; then
+    # Paired-end alignment
+    bwa mem -R "@RG\tID:${SEQID}\tSM:${SAMPLE}\tLB:1" ${REF} ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz > ${SAMPLE}_R1R2.sam
+elif [ "$FASTQ_TYPE" = "single_zip" ]; then
+    # Single-end alignment
+    bwa mem -R "@RG\tID:${SEQID}\tSM:${SAMPLE}\tLB:1" ${REF} ${EXTRACTED_FASTQ} > ${SAMPLE}_R1R2.sam
+fi
 
 mkdir -p dup_metrics
 

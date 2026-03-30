@@ -1,7 +1,7 @@
 # exp_evo_variant_calling
 The experimental evolution variant calling pipeline is a set of bash and python scripts that process sample data in the form of fastq files into annotated vcf files containing potential variants from one's experiments. 
 
-*Authors: Zilong Zeng and Leah Anderson, 2025*
+*Authors: Zilong Zeng and Leah Anderson, 2026*
 
 ## Installation
 First, log onto the GS cluster: 
@@ -36,30 +36,29 @@ Now your directory tree should something like this:
 ```bash
 └── experiment1
     ├── exp_evo_variant_calling
-    │   ├── align_ANC.sh
-    │   ├── align_samtools.sh
-    │   ├── align.sh
-    │   ├── annotation_final.py
-    │   ├── batch_submit.py
-    │   ├── README.md
-    │   └── stringent_filter.py
-    │   └── genomes
+        ├── align.sh
+        ├── annotation_final.py
+        ├── batch_submit.py
+        ├── README.md
+        ├── stringent_filter.py
+        ├──  ...
+        └── genomes
            └── sacCer3.fasta
            └── sacCer3.dict
            └── ...
     ├── fastq
-    │   ├── ancestor_R1_001.fastq.gz
-    │   ├── ancestor_R2_001.fastq.gz
-    │   ├── sample1_R1_001.fastq.gz
-    │   ├── sample1_R2_001.fastq.gz
-    │   ├── sample2_R1_001.fastq.gz
-    │   └── sample2_R2_001.fastq.gz
+        ├── ancestor_R1_001.fastq.gz
+        ├── ancestor_R2_001.fastq.gz
+        ├── sample1_R1_001.fastq.gz
+        ├── sample1_R2_001.fastq.gz
+        ├── sample2_R1_001.fastq.gz
+        └── sample2_R2_001.fastq.gz
 
 ```
 ## Usage
 We have two main steps in our pipeline:
 1. Align the ancestor strain and process its bam and vcf files.
-2. Align and annotate the evolved strain's variants and put the results into comprehensive output files 
+2. Align the evolved strain's variants, apply filters based on the results from aligning ancestor strain and put the results into comprehensive output files 
 
 ### Align Ancestor strain
 First, we need to create the bam files as well as the samtools and freebayes vcfs for our ancestor fastq files.   
@@ -149,6 +148,8 @@ Next, align your ancestor by submitting a job to the cluster with `qsub`:
 ```
 $ qsub align.sh my_ancestor_strain
 ```
+*Note: do not include the whole fastq file name, just the prefix. For example: if your forward read file is "MD4406_S2_R1_001.fastq.gz", then your sample name is "MD4406_S2".*
+
 This may take up to 2 hours to complete, depending on the size of your fastq. You need to wait for the entire job to complete before moving onto the next step.
 After you finished qsub-ing, you can check on the status of your job by using the `qstat -u username` command in the terminal.  
 
@@ -165,24 +166,55 @@ After the job has finished running, you should have a new directory called `Work
     └── WorkDirectory
         └── my_ancestor_strain
             ├── dup_metrics
-            ├── anc_AB_comb_R1R2.RG.MD.realign.sort.bam
-            ├── anc_AB_comb_R1R2.RG.MD.realign.sort.bam.bai
-            ├── anc_AB_comb_freebayes_BCBio.vcf
-            └── anc_AB_samtools_AB.vcf
+            ├── anc_AB_freebayes_BCBio_quality_filter.vcf
+            ├── anc_AB_freebayes_BCBio.vcf
+            ├── anc_AB_gatk_haplo_quality_filter.vcf
+            ├── anc_AB_gatk_haplo.vcf
+            ├── anc_AB_gatk_haplo.vcf.idx
+            ├── anc_AB_R1R2_MD.sort.bam
+            ├── anc_AB_R1R2_MD.sort.bam.bai
+            ├── anc_AB_R1R2_MD.sort.bam.sbi
+            ├── anc_AB_S1_R1_001_fastqc.html
+            └── anc_AB_S1_R2_001_fastqc.html
 ```
+
+### Ancestor Output Explanation
+
+1. `dup_metrics` is a directory which contains the duplicate metrics of the ancestor strain. It may be interesting to look at the `READ_PAIR_DUPLICATES` column to see how many read pairs were flagged as duplicates, or look at the `PERCENTAGE_DUPLICATION` column to see what percent of the reads are duplicates.
+2. `anc_AB_freebayes_BCBio.vcf` is the output of one of the 2 variant callers that we call on the ancestor (FreeBayes).
+3. `anc_AB_freebayes_BCBio_quality_filter.vcf` is a post-processed vcf file of the freebayes output where we filter out some reads based on certain thresholds on mapping quality, read depth, and other metrics.
+4. `anc_AB_gatk_haplo.vcf` is the output of one of the 2 variant callers that we call on the ancestor (FreeBayes).
+5. `anc_AB_gatk_haplo_quality_filter.vcf` is a post-processed vcf file of the GATK HaplotypeCaller output where we filter out reads based on mapping quality, read depth, and other metrics.
+6. `anc_AB_gatk_haplo.vcf.idx` is an index file for the GATK HaplotypeCaller output.
+7. `anc_AB_R1R2_MD.sort.bam`, `anc_AB_R1R2_MD.sort.bam.bai`, and `anc_AB_R1R2_MD.sort.bam.sbi` are the typical `.bam` file outputs that we get.
+8. `anc_AB_S1_R1_001_fastqc.html` and `anc_AB_S1_R2_001_fastqc.html` are Fastq Quality Control Check outputs which can tell us analytical statistics on each of the short reads. 
+
 ### Align and Annotate Evolved Sample
 Now we want to align and annotate the evolved samples. We have two methods of doing this. 
-#### Individual job submissions
+#### Method 1: Individual job submissions
 
-If you only have 1 or 2 samples to run, you can just submit the qsub jobs individually this way:
+If you only have 1 or 2 samples to run, you can just submit the qsub jobs individually this way: 
 
 ```php
-qsub -N sample1_name align.sh sample1 my_ancestor_strain
+qsub -N jobname align.sh sample1 my_ancestor_strain
 ```
 
-### Batch submit
-You can submit multiple samples for alignment and annotating as long as they all come from the same ancestor and  
-they have both R1 and R2 fastqs in one directory. You can do this by submitting the `batch_submit` python script again.
+#### Remember that you only need to use the prefix, not the full file name.
+
+#### Example:
+
+For evolved sample reads `evolved_AB_R1_001.fastq.gz` and ancestor reads `anc_AB_R1_001.fastq.gz`, the command would look like:
+
+```
+qsub -N jobname align.sh evolved_AB anc_AB
+```
+
+### Method 2: Batch submit
+You can submit multiple samples for alignment and annotating as long as:
+1. The samples all come from the same ancestor
+2. The samples have both R1 and R2 fastqs in the directory that is listed in the `SEQDIR` variable in the `align.sh` script.
+
+You can do this by submitting the `batch_submit` python script again.
 
 ```php
 python3 batch_submit.py
@@ -208,32 +240,37 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
 └── WorkDirectory
         ├── my_ancestor_sample
         └── sample1  *NEW*
-            ├── sample1_final_stringent_compiled.txt      
+            ├── dup_metrics
+            ├── sample1_final_stringent_compiled.txt <-- compiled results from all 3 callers
+            ├── sample1_freebayes_BCBio_AncFiltered.vcf
             ├── sample1_freebayes_BCBio_AncFiltered_annotated_vcf.txt
-            ├── sample1_freebayes_BCBio_AncFiltered_condensed.csv
+            ├── sample1_freebayes_BCBio_AncFiltered_condensed.txt
+            ├── sample1_freebayes_BCBio.vcf
+            ├── sample1_gatk_haplo_AncFiltered.vcf
+            ├── sample1_gatk_haplo_AncFiltered_annotated_vcf.txt
+            ├── sample1_gatk_haplo_AncFiltered_condensed.txt
+            ├── sample1_gatk_haplo.vcf
+            ├── sample1_gatk_haplo.vcf.idx
+            ├── sample1_lofreq_AncFiltered.vcf
             ├── sample1_lofreq_AncFiltered_annotated_vcf.txt
-            ├── sample1_lofreq_AncFiltered_condensed.csv
-            ├── sample1_samtools_AB_AncFiltered_annotated_vcf.txt
-            └── sample1_samtools_AB_AncFiltered_condensed.csv
+            ├── sample1_lofreq_AncFiltered_condensed.txt
+            ├── sample1_R1R2_MD.sort.bam
+            ├── sample1_R1R2_MD.sort.bam.bai
+            ├── sample1_R1R2_MD.sort.bam.sbi
+            ├── sample1_S1_R1_001_fastqc.html
+            └── sample1_S1_R2_001_fastqc.html
 ```
+### Output File explanation
 
-- The `freebayes_BCBio_AncFiltered_annotated_vcf.txt`, `lofreq_AncFiltered_annotated_vcf.txt`, and `samtools_AB_AncFiltered_annotated_vcf.txt` are annotated files of each variant caller which has all the ancestor mutations already filtered out. This means that these files contains only the variants that were found over the course of your experiment.
+- The `gatk_haplo.vcf` and `freebayes_BCBio.vcf` are the raw output files from calling the specified variant callers. 
 
-- The `freebayes_BCBio_AncFiltered_condensed.csv`, `lofreq_AncFiltered_condensed.csv`, and `samtools_AB_AncFiltered_condensed.csv` are the same files as the ones mentioned above but we applyed a unique set of filter conditions for each file based on their specific variant caller and we condense the columns. The `_condensed.csv` files only show the columns that are relevant for our analysis. Such columns like `CHROM`, `POS`, `REF`, `ALT`, `ANNOTATION`, `REGION`, and `PROTEIN`. For the filter, a file's particular variant caller changes the filter conditions for `QUAL`,`DP`, and number of reads on the ref and alt alleles. We would keep any variants that pass the specified threshold for `QUAL`, `DP`, etc. 
+- The `freebayes_BCBio_AncFiltered.vcf`, `lofreq_AncFiltered.vcf`, and `gatk_haplo_AncFiltered.vcf` are files of each variant caller which has all the ancestor mutations already filtered out. This means that these files contains only the variants that were found over the course of your experiment.
 
-- For example, we set our Gatk4 filter to have a default `QUAL` threshold of 125, so any variants under 125 for the `QUAL` would not make it into the `samtools_AB_AncFiltered_condensed.csv`. Our Freebayes filter on the other hand has a `QUAL` threshold of 20.
+- The `freebayes_BCBio_AncFiltered_annotated_vcf.txt`, `lofreq_AncFiltered_annotated_vcf.txt`, and `gatk_haplo_AncFiltered_annotated_vcf.txt` are annotated files of each variant caller which has all the ancestor mutations already filtered out. 
 
-- The `final_stringent_compiled.txt` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.csv`, `lofreq_AncFiltered_condense.csv`, and `samtools_AB_AncFiltered_condensed.csv` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers. 
+- The `freebayes_BCBio_AncFiltered_condensed.txt`, `lofreq_AncFiltered_condensed.txt`, and `gatk_haplo_AncFiltered_condensed.txt` are the same files as the ones mentioned above but we applyed a unique set of filter conditions for each file based on their specific variant caller and we condense the columns. The `_condensed.csv` files only show the columns that are relevant for our analysis. Such columns like `CHROM`, `POS`, `REF`, `ALT`, `ANNOTATION`, `REGION`, and `PROTEIN`. For the filter, a file's particular variant caller changes the filter conditions for `QUAL`,`DP`, and number of reads on the ref and alt alleles. We would keep any variants that pass the specified threshold for `QUAL`, `DP`, etc. 
 
-Below is a pipeline of how these file output files are generated. 
-```
-                                                (filter based on thresholds, keep only important columns)             (Append all vcfs together)
-freebayes_BCBio_AncFiltered_annotated_vcf.txt ─────────[filter]───freebayes_BCBio_AncFiltered_condensed.csv────┐
-                                                                                                               │ 
-lofreq_AncFiltered_annotated_vcf.txt ──────────────────[filter]─────lofreq_AncFiltered_condensed.csv───────────┼───>  final_stringent_compiled.csv
-                                                                                                               │
-samtools_AB_AncFiltered_annotated_vcf.txt ─────────────[filter]─────samtools_AB_AncFiltered_condensed.csv──────┘
-```
+- The `final_stringent_compiled.txt` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.txt`, `lofreq_AncFiltered_condensed.txt`, and `gatk_haplo_AncFiltered_condensed.txt` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers. 
 
 It is recommended that each variant is then checked in a genome alignment viewing software such as IGV: https://igv.org/
-By opening the final_stringent_compiled.csv file in a program like Microsoft Excel, you can sort the called variants by quality score and/or number of occurrences across the different variant callers.
+By opening the `final_stringent_compiled.txt` file in a program like Microsoft Excel, you can sort the called variants by quality score and/or number of occurrences across the different variant callers.
