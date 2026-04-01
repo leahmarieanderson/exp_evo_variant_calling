@@ -241,6 +241,9 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
         ├── my_ancestor_sample
         └── sample1  *NEW*
             ├── dup_metrics
+            ├── sample1_final_stringent_compiled_1caller.bed
+            ├── sample1_final_stringent_compiled_2caller.bed
+            ├── sample1_final_stringent_compiled_3caller.bed
             ├── sample1_final_stringent_compiled.txt <-- compiled results from all 3 callers
             ├── sample1_freebayes_BCBio_AncFiltered.vcf
             ├── sample1_freebayes_BCBio_AncFiltered_annotated_vcf.txt
@@ -270,7 +273,23 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
 
 - The `freebayes_BCBio_AncFiltered_condensed.txt`, `lofreq_AncFiltered_condensed.txt`, and `gatk_haplo_AncFiltered_condensed.txt` are the same files as the ones mentioned above but we applyed a unique set of filter conditions for each file based on their specific variant caller and we condense the columns. The `_condensed.csv` files only show the columns that are relevant for our analysis. Such columns like `CHROM`, `POS`, `REF`, `ALT`, `ANNOTATION`, `REGION`, and `PROTEIN`. For the filter, a file's particular variant caller changes the filter conditions for `QUAL`,`DP`, and number of reads on the ref and alt alleles. We would keep any variants that pass the specified threshold for `QUAL`, `DP`, etc. 
 
-- The `final_stringent_compiled.txt` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.txt`, `lofreq_AncFiltered_condensed.txt`, and `gatk_haplo_AncFiltered_condensed.txt` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers. 
+- The `final_stringent_compiled.txt` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.txt`, `lofreq_AncFiltered_condensed.txt`, and `gatk_haplo_AncFiltered_condensed.txt` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers.
+  
+- The `final_stringent_compiled_1caller.bed`, `final_stringent_compiled_2caller.bed`, and `final_stringent_compiled_3caller.bed` files are files which show the respective variants which are called by 1, 2, or 3 callers. It is recommended to use these bed files to check each variant in a genome alignment viewing software such as IGV: https://igv.org/
 
-It is recommended that each variant is then checked in a genome alignment viewing software such as IGV: https://igv.org/
 By opening the `final_stringent_compiled.txt` file in a program like Microsoft Excel, you can sort the called variants by quality score and/or number of occurrences across the different variant callers.
+
+### IGV App BED File Tutorial
+To do the BED file variant navigation on IGV, you'll need to follow the steps exactly as listed below as making misclick will cause the app to not read the BED file properly and not give functionality to keyboard shortcuts.
+
+1. Open IGV and on the top left corner tab, select "S. cerevisiae (sacCer3)" as the genome
+2. Upload your `.bed` files as well as the associated `.bam` and `.bam.bai` files.
+3. After this, drag and zoom using the chromosome view on the top section of the app. Zoom into a position where there is a variant listed on your bed file. Keep zooming until you are fully zoomed into the variant. 
+4. On the sidebar that lists all the files loaded, double click the BED tab that you want to navigate.
+5. press `f` to go forward and `b` to go backwards. This will sequencially jump to the next variant. Unfortunately you cannot jump to variants based on the `QUAL` value, only sequentially (CHRI -> CHRII -> CHRIII ... etc).
+
+*If the `f` and `b` buttons do not work, you will need to reload IGV and try again as you may have misclicked somewhere in between the steps.*
+
+Below is a gif of the process.
+![IGV_bed_tutorial](https://github.com/user-attachments/assets/e1dfda07-fdf8-4fc1-9676-3f9033ead4bf)
+
