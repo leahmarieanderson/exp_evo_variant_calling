@@ -36,7 +36,7 @@ DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=test4 # Project name and date for bam header
+SEQID=leah-reanalyze5 # Project name and date for bam header
 REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
@@ -149,55 +149,55 @@ VCFDIR=${WORKDIR}/${ANC}
 # #        --bqsr-recal-file ${SAMPLE}_recal_data.table 
 # #        -O ${SAMPLE}_R1R2_MD.sort.bqrs.bam
 
-# (>&2 echo ***GATK4 - Calling Variants***)
-# gatk HaplotypeCaller \
-#      -R ${REF} \
-#      -I ${SAMPLE}_R1R2_MD.sort.bam \
-#      -O ${SAMPLE}_gatk_haplo.vcf
+(>&2 echo ***GATK4 - Calling Variants***)
+gatk HaplotypeCaller \
+     -R ${REF} \
+     -I ${SAMPLE}_R1R2_MD.sort.bam \
+     -O ${SAMPLE}_gatk_haplo.vcf
 
-# # Freebayes
-# # Haplotype length of 0 means that it will not attempt to call haplotypes and will just call variants independently. 
-# # This is important for our yeast data since we have a lot of low frequency variants and we don't want to miss them by trying to call haplotypes. 
-# # The --pooled-continuous argument allows freebayes to call variants in pooled samples and report allele frequencies instead of genotypes. 
-# # The --report-genotype-likelihood-max argument reports the maximum genotype likelihoods for each variant, which can be useful for filtering later on. 
-# # The --allele-balance-priors-off argument turns off the default priors for allele balance, which can be helpful for calling variants in pooled samples where the allele balance may not follow the expected distribution. 
-# # The --min-alternate-fraction 0.1 argument sets a minimum threshold for the alternate allele fraction, which can help reduce false positives from sequencing errors.
-# freebayes -f ${REF} \
-#         --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 --haplotype-length 0 \
-#         ${SAMPLE}_R1R2_MD.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
+#Freebayes
+# Haplotype length of 0 means that it will not attempt to call haplotypes and will just call variants independently. 
+# This is important for our yeast data since we have a lot of low frequency variants and we don't want to miss them by trying to call haplotypes. 
+# The --pooled-continuous argument allows freebayes to call variants in pooled samples and report allele frequencies instead of genotypes. 
+# The --report-genotype-likelihood-max argument reports the maximum genotype likelihoods for each variant, which can be useful for filtering later on. 
+# The --allele-balance-priors-off argument turns off the default priors for allele balance, which can be helpful for calling variants in pooled samples where the allele balance may not follow the expected distribution. 
+# The --min-alternate-fraction 0.1 argument sets a minimum threshold for the alternate allele fraction, which can help reduce false positives from sequencing errors.
+freebayes -f ${REF} \
+        --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 --haplotype-length 0 \
+        ${SAMPLE}_R1R2_MD.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
-# # Requires ANC from this line down
-# # check if ANC argument was given. If there is, then continue with Ancestor filtering 
+# Requires ANC from this line down
+# check if ANC argument was given. If there is, then continue with Ancestor filtering 
  if [ -n "$2" ]; then 
-#         # Go to Work Directory
+        # Go to Work Directory
          cd ${WORKDIR}/${SAMPLE}
-#         (>&2 echo ***LoFreq - Somatic***)
-#         lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam -f ${REF} \
-#         -o ${SAMPLE}_lofreq_
+        (>&2 echo ***LoFreq - Somatic***)
+        lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam -f ${REF} \
+        -o ${SAMPLE}_lofreq_
 
-#         # Unzips lofreq vcfs
-#         bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
-#         bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
-#         bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
+        # Unzips lofreq vcfs
+        bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
+        bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
+        bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
 
-#         # Filters gatk_haplo by ancestor
-#         (>&2 echo ***Bedtools - Intersect***)
-#         bedtools intersect -v -header \
-#                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo.vcf \
-#                 -b ${VCFDIR}/${ANC}_gatk_haplo_quality_filter.vcf \
-#                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
+        # Filters gatk_haplo by ancestor
+        (>&2 echo ***Bedtools - Intersect***)
+        bedtools intersect -v -header \
+                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo.vcf \
+                -b ${VCFDIR}/${ANC}_gatk_haplo_quality_filter.vcf \
+                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
 
-#         # Filters freebayes by ancestor 
-#         bedtools intersect -v -header \
-#                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
-#                 -b ${VCFDIR}/${ANC}_freebayes_BCBio_quality_filter.vcf \
-#                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
+        # Filters freebayes by ancestor 
+        bedtools intersect -v -header \
+                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
+                -b ${VCFDIR}/${ANC}_freebayes_BCBio_quality_filter.vcf \
+                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
 
-#         # Filters lofreq by ancestor
-#         bedtools intersect -v -header \
-#                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
-#                 -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
-#                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered_temp.vcf
+        # Filters lofreq by ancestor
+        bedtools intersect -v -header \
+                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
+                -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
+                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered_temp.vcf
 
         # Normalize indel representations so all callers use the same left-aligned, minimal anchor form
         #This makes the step combining vcfs easier and more accurate since the same indel will be represented in the same way across all vcfs

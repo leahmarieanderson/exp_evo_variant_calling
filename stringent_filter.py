@@ -20,7 +20,7 @@ LOFREQ_DP_THRES = 10
 LOFREQ_Non_Coding_QUAL_THRES = 40
 LOFREQ_Telomere_QUAL_THRES = 80
 
-non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron"]
+non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron", "multi-allelic"]
 
 # use unique filters on the txt file (which represents our simpified vcf file)
 def caller_filter(caller_name, input_file, output_file):
@@ -364,19 +364,29 @@ def main(all_file_names):
             reader = csv.DictReader(f,  delimiter="\t")
             reader.fieldnames = [name.strip() for name in reader.fieldnames]
             for row in reader:
-                key = (row["CHROM"], row["POS"], row["REF"], row["ALT"], row["ANNOTATION"], row["REGION"], row["PROTEIN"])
+                key = (row["CHROM"], row["POS"])
 
                 if key not in variant_dict:
                     variant_dict[key] = {
-                        "NUM_OCCURRENCES": 0,
+                        "REF": [],
+                        "ALT": [],
+                        "ANNOTATION": [],
+                        "REGION": [],
+                        "PROTEIN": [],
+                        "callers_seen": set(),
                         "QUAL_gatk": None,
                         "QUAL_freebayes": None,
                         "QUAL_lofreq": None
                     }
-                
+
+                entry = variant_dict[key]
+                for field in ["REF", "ALT", "ANNOTATION", "REGION", "PROTEIN"]:
+                    if row[field] not in entry[field]:
+                        entry[field].append(row[field])
+
                 # Update count and QUAL value for the specific tool
-                variant_dict[key]["NUM_OCCURRENCES"] += 1
-                variant_dict[key][f"QUAL_{source}"] = row["QUAL"]
+                entry["callers_seen"].add(source)
+                entry[f"QUAL_{source}"] = row["QUAL"]
 
     sample_name = converted_files[0]
     for suffix in ["_gatk_haplo_AncFiltered_condensed.txt",
@@ -394,11 +404,16 @@ def main(all_file_names):
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
         
-        for (CHROM, POS, REF, ALT, ANNOTATION, REGION, PROTEIN), values in variant_dict.items():
+        for (CHROM, POS), values in variant_dict.items():
             writer.writerow({
-                "CHROM": CHROM, "POS": POS, "REF": REF, "ALT": ALT, 
-                "ANNOTATION": ANNOTATION, "REGION": REGION, "PROTEIN": PROTEIN,
-                "NUM_OCCURRENCES": values["NUM_OCCURRENCES"],
+                "CHROM": CHROM,
+                "POS": POS,
+                "REF": ";".join(values["REF"]),
+                "ALT": ";".join(values["ALT"]),
+                "ANNOTATION": ";".join(values["ANNOTATION"]),
+                "REGION": ";".join(values["REGION"]),
+                "PROTEIN": ";".join(values["PROTEIN"]),
+                "NUM_OCCURRENCES": len(values["callers_seen"]),
                 "QUAL_gatk": values["QUAL_gatk"],
                 "QUAL_freebayes": values["QUAL_freebayes"],
                 "QUAL_lofreq": values["QUAL_lofreq"]
