@@ -149,34 +149,11 @@ cd ${WORKDIR}/${SAMPLE}
 # #        --bqsr-recal-file ${SAMPLE}_recal_data.table 
 # #        -O ${SAMPLE}_R1R2_MD.sort.bqrs.bam
 
-(>&2 echo ***GATK4 - Calling Variants - Nuclear chromosomes***)
+(>&2 echo ***GATK4 - Calling Variants***)
 gatk HaplotypeCaller \
      -R ${REF} \
      -I ${SAMPLE}_R1R2_MD.sort.bam \
-     -XL chrM \
-     -O ${SAMPLE}_gatk_haplo_nuclear.vcf
-
-(>&2 echo ***GATK4 - Calling Variants - chrM via Mutect2 mitochondrial mode***)
-#we have to do the mito genome separately because GATK HaplotypeCaller gets very confused about the AT richness of yeast mitoDNA
-     --mitochondria-mode \
-     --annotation MappingQuality \
-     --annotation StrandOddsRatio \
-     -R ${REF} \
-     -I ${SAMPLE}_R1R2_MD.sort.bam \
-     -L chrM \
-     -O ${SAMPLE}_mutect2_chrM_raw.vcf
-
-gatk FilterMutectCalls \
-     --mitochondria-mode \
-     -R ${REF} \
-     -V ${SAMPLE}_mutect2_chrM_raw.vcf \
-     -O ${SAMPLE}_mutect2_chrM.vcf
-
-(>&2 echo ***BCFtools - Merging nuclear and chrM calls***)
-bcftools concat \
-     ${SAMPLE}_gatk_haplo_nuclear.vcf \
-     ${SAMPLE}_mutect2_chrM.vcf \
-     -o ${SAMPLE}_gatk_haplo.vcf
+     -O ${SAMPLE}_gatk_haplo.vcf
 
 #Freebayes
 # Haplotype length of 0 means that it will not attempt to call haplotypes and will just call variants independently. 
@@ -260,8 +237,16 @@ freebayes -f ${REF} \
 
         (>&2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
 
+        # Compute mean nuclear read depth (excluding chrM) to detect anomalously high-coverage
+        # regions (mtDNA, TEs, repeats) where raw QUAL scores are inflated.
+        AVG_DEPTH=$(samtools coverage ${SAMPLE}_R1R2_MD.sort.bam \
+            | awk 'NR>1 && $1!="chrM" {total += $7 * ($3-$2+1); bases += ($3-$2+1)} \
+                   END {if (bases > 0) printf "%.4f", total/bases; else print "0"}')
+        (>&2 echo Average nuclear read depth: ${AVG_DEPTH})
+
         # After, we would like to create a csv with just the necessary information
         python3 ${SCRIPTS}/stringent_filter.py \
+        --avg-depth ${AVG_DEPTH} \
         ${SAMPLE}_gatk_haplo_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt

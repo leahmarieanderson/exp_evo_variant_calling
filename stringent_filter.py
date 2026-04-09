@@ -28,7 +28,7 @@ LOFREQ_Telomere_QUAL_THRES = 80
 non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron", "multi-allelic"]
 
 # use unique filters on the txt file (which represents our simpified vcf file)
-def caller_filter(caller_name, input_file, output_file):
+def caller_filter(caller_name, input_file, output_file, avg_depth=None):
     caller_QUAL_THRES = 0
     caller_DP_THRES = 0
     caller_NC_QUAL_THRES = 0
@@ -84,39 +84,47 @@ def caller_filter(caller_name, input_file, output_file):
                 sor_threshold = 10 if is_indel else 3
                 # Parse DP from INFO field since INFO field contains many variables
                 for entry in info.split(';'):
-                    
+
                     if entry.startswith('DP='): # get DP
                         dp = float(entry.split('=')[1])
-                    
+
                     if entry.startswith('SOR='):
                         sor = float(entry.split('=')[1])
-                    
+
                     if entry.startswith('MQ='): # get MQ
                         mq = float(entry.split('=')[1])
+
+                # If depth is much higher than the sample average, raw QUAL is unreliable
+                # (high coverage inflates QUAL at mtDNA, TEs, and repetitive regions).
+                # Switch to QD (QUAL/DP) in that case.
+                use_qd = avg_depth is not None and dp is not None and dp >= HIGH_DEPTH_MULTIPLIER * avg_depth
 
                 # if the annotation is not in non_gff_annotations, make the filter more stringent
                 if anno not in non_gff_annonations:
                     # If telomere, then use the telomere qual value threshold
                     if anno == "telomere":
-                        if (all(val is not None for val in [mq, sor, dp]) 
-                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                        qual_check = (qual / dp >= HIGH_DEPTH_QD_THRES) if use_qd else (qual >= caller_TELOMERE_QUAL_THRES)
+                        if (all(val is not None for val in [mq, sor, dp])
+                            and qual_check and dp >= caller_DP_THRES * 2
                             and mq > 30 and sor < sor_threshold
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
-                    else: 
+                    else:
                         # Apply stringent filters since it is non-coding
-                        if (all(val is not None for val in [mq, sor, dp]) 
-                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
+                        qual_check = (qual / dp >= HIGH_DEPTH_QD_THRES) if use_qd else (qual >= caller_NC_QUAL_THRES)
+                        if (all(val is not None for val in [mq, sor, dp])
+                            and qual_check and dp >= caller_DP_THRES * 2
                             and mq > 30 and sor < sor_threshold
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
                 else: # it's coding, just apply regular stringent filter based on the type of caller was used
+                    qual_check = (qual / dp >= HIGH_DEPTH_QD_THRES) if use_qd else (qual >= caller_QUAL_THRES)
                     if (all(val is not None for val in [mq, sor, dp])  # all variables aren't None
-                        and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES  # greater than or equal to our QUAL and DP thresholds
+                        and qual_check and dp >= caller_DP_THRES  # greater than or equal to our QUAL and DP thresholds
                         and mq > 30 and sor < sor_threshold
                         ):
                         # Create a filtered row with only the selected columns
@@ -157,35 +165,43 @@ def caller_filter(caller_name, input_file, output_file):
                         num_reads = entry.split('=')[1].split(',') # Get value(s) after 'SRR=' there will be more than one value if it is multi-allelic
                         srr = sum(float(read_num) for read_num in num_reads)
                 
+                # If depth is much higher than the sample average, raw QUAL is unreliable
+                # (high coverage inflates QUAL at mtDNA, TEs, and repetitive regions).
+                # Switch to QD (QUAL/DP) in that case.
+                use_qd = avg_depth is not None and dp is not None and dp >= HIGH_DEPTH_MULTIPLIER * avg_depth
+
                 # if the annotation is not in non_gff_annotations, make the filter more stringent
                 if anno not in non_gff_annonations:
                     # If telomere, then use the telomere qual value threshold
                     if anno == "telomere":
-                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
-                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mqm > 30 and (saf + sar) > 4 
-                            and ((srf + saf)/ dp) > 0.01 
+                        qual_check = (qual / dp >= HIGH_DEPTH_QD_THRES) if use_qd else (qual >= caller_TELOMERE_QUAL_THRES)
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr])
+                            and qual_check and dp >= caller_DP_THRES * 2
+                            and mqm > 30 and (saf + sar) > 4
+                            and ((srf + saf)/ dp) > 0.01
                             and ((srr + sar)/ dp) > 0.01
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
-                    else: 
+                    else:
                         # Apply stringent filters since it is non-coding
-                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
-                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mqm > 30 and (saf + sar) > 4 
-                            and ((srf + saf)/ dp) > 0.01 
+                        qual_check = (qual / dp >= HIGH_DEPTH_QD_THRES) if use_qd else (qual >= caller_NC_QUAL_THRES)
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr])
+                            and qual_check and dp >= caller_DP_THRES * 2
+                            and mqm > 30 and (saf + sar) > 4
+                            and ((srf + saf)/ dp) > 0.01
                             and ((srr + sar)/ dp) > 0.01
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
                 else: # it's coding, just apply regular stringent filter based on the type of caller was used
-                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
-                        and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES
-                        and mqm > 30 and (saf + sar) > 4 
-                        and ((srf + saf)/ dp) > 0.01 
+                    qual_check = (qual / dp >= HIGH_DEPTH_QD_THRES) if use_qd else (qual >= caller_QUAL_THRES)
+                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr])
+                        and qual_check and dp >= caller_DP_THRES
+                        and mqm > 30 and (saf + sar) > 4
+                        and ((srf + saf)/ dp) > 0.01
                         and ((srr + sar)/ dp) > 0.01
                         ):
                         # Create a filtered row with only the selected columns
@@ -251,7 +267,7 @@ def caller_filter(caller_name, input_file, output_file):
                         writer.writerow(filtered_row)
 
 # filters the annotated_vcf.txt files and converts them into csv format
-def filter_vcf(input_file):
+def filter_vcf(input_file, avg_depth=None):
     # variables so we can set filter thresholds appropriately
     caller_name = ""
 
@@ -284,7 +300,7 @@ def filter_vcf(input_file):
     csv_name = input_file.replace("_annotated_vcf.txt", "_condensed.txt")
 
     # Filter the temp file we created based on caller used to call the variants
-    caller_filter(caller_name, "temp.txt", csv_name)
+    caller_filter(caller_name, "temp.txt", csv_name, avg_depth=avg_depth)
     
     # remove temp.txt
     if os.path.exists("temp.txt"):
@@ -336,11 +352,11 @@ def sort_csv(csv_name):
             writer.writerows(rows_sorted)
 
 
-def main(all_file_names):
+def main(all_file_names, avg_depth=None):
     # convert annotated txt files into csv files
     converted_files = []
     for txtfile in all_file_names:
-        csv_name = filter_vcf(txtfile)
+        csv_name = filter_vcf(txtfile, avg_depth=avg_depth)
         converted_files.append(csv_name)
     
     # Input CSV files
@@ -434,6 +450,11 @@ def main(all_file_names):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Combine multiple CSV files into one.")
     parser.add_argument("all_file_names", type=str, nargs='+', help="Names of files to filter and combine (assumed to be in the current directory).")
-    
+    parser.add_argument("--avg-depth", type=float, default=None,
+                        help="Mean nuclear read depth for the sample (computed from the BAM). "
+                             "When a variant's DP exceeds avg_depth * 4, QD (QUAL/DP) is used "
+                             "instead of raw QUAL to avoid false high-quality calls in high-coverage "
+                             "regions such as mtDNA, TEs, and tandem repeats.")
+
     args = parser.parse_args()
-    main(args.all_file_names)
+    main(args.all_file_names, avg_depth=args.avg_depth)
