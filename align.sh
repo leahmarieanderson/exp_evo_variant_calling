@@ -36,7 +36,7 @@ DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=leah-reanalyze5 # Project name and date for bam header
+SEQID=leahmito # Project name and date for bam header
 REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
@@ -70,7 +70,7 @@ VCFDIR=${WORKDIR}/${ANC}
 
 # # Sets up folder structure
 # mkdir -p ${WORKDIR}/${SAMPLE}
-# cd ${WORKDIR}/${SAMPLE}
+cd ${WORKDIR}/${SAMPLE}
 
 # # Perform FastQC checks on our samples
 # (>&2 echo ***FASTQC on SAMPLE ***)
@@ -149,11 +149,34 @@ VCFDIR=${WORKDIR}/${ANC}
 # #        --bqsr-recal-file ${SAMPLE}_recal_data.table 
 # #        -O ${SAMPLE}_R1R2_MD.sort.bqrs.bam
 
-(>&2 echo ***GATK4 - Calling Variants***)
+(>&2 echo ***GATK4 - Calling Variants - Nuclear chromosomes***)
 gatk HaplotypeCaller \
      -R ${REF} \
      -I ${SAMPLE}_R1R2_MD.sort.bam \
-     -O ${SAMPLE}_gatk_haplo.vcf
+     -XL chrM \
+     -O ${SAMPLE}_gatk_haplo_nuclear.vcf
+
+(>&2 echo ***GATK4 - Calling Variants - chrM via Mutect2 mitochondrial mode***)
+#we have to do the mito genome separately because GATK HaplotypeCaller gets very confused about the AT richness of yeast mitoDNA
+     --mitochondria-mode \
+     --annotation MappingQuality \
+     --annotation StrandOddsRatio \
+     -R ${REF} \
+     -I ${SAMPLE}_R1R2_MD.sort.bam \
+     -L chrM \
+     -O ${SAMPLE}_mutect2_chrM_raw.vcf
+
+gatk FilterMutectCalls \
+     --mitochondria-mode \
+     -R ${REF} \
+     -V ${SAMPLE}_mutect2_chrM_raw.vcf \
+     -O ${SAMPLE}_mutect2_chrM.vcf
+
+(>&2 echo ***BCFtools - Merging nuclear and chrM calls***)
+bcftools concat \
+     ${SAMPLE}_gatk_haplo_nuclear.vcf \
+     ${SAMPLE}_mutect2_chrM.vcf \
+     -o ${SAMPLE}_gatk_haplo.vcf
 
 #Freebayes
 # Haplotype length of 0 means that it will not attempt to call haplotypes and will just call variants independently. 
@@ -278,10 +301,10 @@ else
 
 (>&2 echo ***BCFtools - Filter***)
 bcftools filter -O v -o ${SAMPLE}_gatk_haplo_quality_filter.vcf \
-        -i 'MQ>30 & QUAL>75 & (INFO/DP)>40 & (INFO/SOR)<3' \
+        -i 'MQ>30 & QUAL>75 & (INFO/DP)>10 & (INFO/SOR)<6' \
         ${SAMPLE}_gatk_haplo.vcf
 
 bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_quality_filter.vcf \
-        -i 'MQM>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
+        -i 'MQM>25 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
         ${SAMPLE}_freebayes_BCBio.vcf
 fi

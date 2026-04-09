@@ -2,6 +2,11 @@ import csv
 import argparse
 import os
 
+# If a variant's depth exceeds this multiple of the sample average, switch from raw QUAL to QD (QUAL/DP).
+# This prevents inflated scores at high-coverage regions (mtDNA, TEs, tandem repeats) from passing the filter.
+HIGH_DEPTH_MULTIPLIER = 4
+HIGH_DEPTH_QD_THRES = 5.0
+
 # filter values for a gatk called file
 GATK_QUAL_THRES = 125
 GATK_DP_THRES = 10
