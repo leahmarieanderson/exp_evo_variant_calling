@@ -135,6 +135,8 @@ def caller_filter(caller_name, input_file, output_file, avg_depth=None):
                 srr = None # Number of reference observations on the reverse strand
                 saf = None # Number of alternate observations on the forward strand
                 sar = None # Number of alternate observations on the reverse strand
+                rpl = None # Number of alt reads placed on the left (5') end
+                rpr = None # Number of alt reads placed on the right (3') end
                 
                 # Parse DP from INFO field since INFO field contains many variables
                 for entry in info.split(';'):
@@ -161,6 +163,14 @@ def caller_filter(caller_name, input_file, output_file, avg_depth=None):
                     elif entry.startswith('SRR='): # get SRR
                         num_reads = entry.split('=')[1].split(',') # Get value(s) after 'SRR=' there will be more than one value if it is multi-allelic
                         srr = sum(float(read_num) for read_num in num_reads)
+
+                    elif entry.startswith('RPL='): # get RPL
+                        num_reads = entry.split('=')[1].split(',') # Get value(s) after 'RPL=' to make sure the alt allele isn't all on one side
+                        rpl = sum(float(read_num) for read_num in num_reads)
+
+                    elif entry.startswith('RPR='): # get RPR
+                        num_reads = entry.split('=')[1].split(',') # Get value(s) after 'RPR=' (same as above)
+                        rpr = sum(float(read_num) for read_num in num_reads)
                 
                 # If depth is much higher than the sample average, normalize QUAL by DP.
                 # High coverage inflates raw QUAL at mtDNA, TEs, and repetitive regions,
@@ -172,32 +182,35 @@ def caller_filter(caller_name, input_file, output_file, avg_depth=None):
                 if anno not in non_gff_annonations:
                     # If telomere, then use the telomere qual value threshold
                     if anno == "telomere":
-                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr])
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr, rpl, rpr])
                             and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2
                             and mqm > 30 and (saf + sar) > 4
                             and ((srf + saf)/ dp) > 0.01
                             and ((srr + sar)/ dp) > 0.01
+                            and rpl > 0 and rpr > 0
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
                     else:
                         # Apply stringent filters since it is non-coding
-                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr])
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr, rpl, rpr])
                             and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2
                             and mqm > 30 and (saf + sar) > 4
                             and ((srf + saf)/ dp) > 0.01
                             and ((srr + sar)/ dp) > 0.01
+                            and rpl > 0 and rpr > 0
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
                 else: # it's coding, just apply regular stringent filter based on the type of caller was used
-                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr])
+                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr, rpl, rpr])
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES
                         and mqm > 30 and (saf + sar) > 4
                         and ((srf + saf)/ dp) > 0.01
                         and ((srr + sar)/ dp) > 0.01
+                        and rpl > 0 and rpr > 0
                         ):
                         # Create a filtered row with only the selected columns
                         filtered_row = [row_dict[col] for col in filtered_fieldnames]
