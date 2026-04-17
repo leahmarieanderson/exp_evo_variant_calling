@@ -357,6 +357,9 @@ def sort_csv(csv_name, gene_map=None):
             rows,
             key=lambda x: (
                 -int(x['NUM_OCCURRENCES']),
+                -float(x["QUAL_lofreq"] or 0),
+                -float(x["QUAL_freebayes"] or 0),
+                -float(x["QUAL_gatk"] or 0),
                 chromosome_conversion(x['CHROM']),
                 int(x['POS'])
             )
@@ -364,7 +367,7 @@ def sort_csv(csv_name, gene_map=None):
 
         final_result_name = csv_name.replace(
             'all_condensed.txt',
-            'final_stringent_compiled.txt'
+            'stringent_compiled.txt'
         )
 
         region_idx = reader.fieldnames.index('REGION')
@@ -471,7 +474,20 @@ def main(all_file_names, avg_depth=None):
     if os.path.exists(temp):
         os.remove(temp)
 
-    print("Combined CSV saved to " + sample_name + "_final_stringent_compiled.txt")
+    stringent_compiled = sample_name + "_stringent_compiled.txt"
+    final_compiled = sample_name + "_final_stringent_compiled.txt"
+
+    with open(stringent_compiled, 'r', newline='') as infile, \
+         open(final_compiled, 'w', newline='') as outfile:
+        reader = csv.DictReader(infile, delimiter='\t')
+        writer = csv.DictWriter(outfile, fieldnames=reader.fieldnames, delimiter='\t')
+        writer.writeheader()
+        for row in reader:
+            if int(row['NUM_OCCURRENCES']) >= 2:
+                writer.writerow(row)
+
+    print("All variants saved to " + stringent_compiled)
+    print("2+ caller variants saved to " + final_compiled)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Combine multiple CSV files into one.")
@@ -479,7 +495,7 @@ if __name__ == "__main__":
     parser.add_argument("--avg-depth", type=float, default=None,
                         help="Mean nuclear read depth for the sample (computed from the BAM). "
                              "When a variant's DP exceeds avg_depth * 4, QUAL is replaced with "
-                             "QUAL/DP before applying the normal quality threshold, preventing "
+                             "QUAL/(DP/avg_depth) before applying the normal quality threshold, preventing "
                              "inflated scores in high-coverage regions such as mtDNA, TEs, and tandem repeats.")
 
     args = parser.parse_args()

@@ -36,7 +36,7 @@ DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/pipeline_test
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=outputopt1 # Project name and date for bam header
+SEQID=outputOpt7 # Project name and date for bam header
 REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
@@ -255,10 +255,13 @@ cd ${WORKDIR}/${SAMPLE}
         ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
 
         python3 ${SCRIPTS}/makeBED.py \
-                -i ${SAMPLE}_final_stringent_compiled.txt \
-                -o1 ${SAMPLE}_final_stringent_compiled_3callers.bed \
-                -o2 ${SAMPLE}_final_stringent_compiled_2callers.bed \
-                -o3 ${SAMPLE}_final_stringent_compiled_1caller.bed
+                -i1 ${SAMPLE}_stringent_compiled.txt \
+                -i2 ${SAMPLE}_final_stringent_compiled.txt \
+                -o1 ${SAMPLE}_all_variants.bed \
+                -o2 ${SAMPLE}_highConfidenceVars.bed
+
+        mkdir -p ${DIR}/final-results-all
+        cp ${SAMPLE}_highConfidenceVars.bed ${DIR}/final-results-all/
 
         # remove all the lofreq intermediate files
         rm ${SAMPLE}_lofreq_normal_relaxed.log
