@@ -329,8 +329,22 @@ def chromosome_conversion(chrom_number):
 	except ValueError:			
 		return chrom_conv[chrom_number]
 
+def load_gene_info():
+    gene_info_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gene_info.csv')
+    gene_map = {}
+    if os.path.exists(gene_info_path):
+        with open(gene_info_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                gene_map[row['REGION']] = row['GENE']
+    return gene_map
+
+def lookup_gene_names(region_str, gene_map):
+    names = [gene_map.get(r, '') for r in region_str.split(';')]
+    return ';'.join(names)
+
 # given a csv, sort based on the CHROM column and POS column
-def sort_csv(csv_name):
+def sort_csv(csv_name, gene_map=None):
     with open(csv_name, 'r', newline='') as infile:
         reader = csv.DictReader(infile, delimiter='\t')
         rows = list(reader)
@@ -353,11 +367,15 @@ def sort_csv(csv_name):
             'final_stringent_compiled.txt'
         )
 
+        region_idx = reader.fieldnames.index('REGION')
+        fieldnames = reader.fieldnames[:region_idx + 1] + ['GENE'] + reader.fieldnames[region_idx + 1:]
+
         with open(final_result_name, 'w', newline='') as outfile:
-            fieldnames = reader.fieldnames
             writer = csv.DictWriter(outfile, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            writer.writerows(rows_sorted)
+            for row in rows_sorted:
+                row['GENE'] = lookup_gene_names(row['REGION'], gene_map or {})
+                writer.writerow(row)
 
 
 def main(all_file_names, avg_depth=None):
@@ -448,7 +466,7 @@ def main(all_file_names, avg_depth=None):
                 "QUAL_lofreq": values["QUAL_lofreq"]
             })
 
-    sort_csv(temp) # sort the combined csv file
+    sort_csv(temp, gene_map=load_gene_info()) # sort the combined csv file
     # get rid of the intermediate csv file
     if os.path.exists(temp):
         os.remove(temp)
