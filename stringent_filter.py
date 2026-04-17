@@ -97,7 +97,7 @@ def caller_filter(caller_name, input_file, output_file, avg_depth=None):
                 # High coverage inflates raw QUAL at mtDNA, TEs, and repetitive regions,
                 # so dividing by DP makes the threshold meaningful again.
                 if avg_depth is not None and dp is not None and dp >= HIGH_DEPTH_MULTIPLIER * avg_depth:
-                    qual = qual / dp
+                    qual = qual / (dp/avg_depth)
 
                 # if the annotation is not in non_gff_annotations, make the filter more stringent
                 if anno not in non_gff_annonations:
@@ -176,7 +176,7 @@ def caller_filter(caller_name, input_file, output_file, avg_depth=None):
                 # High coverage inflates raw QUAL at mtDNA, TEs, and repetitive regions,
                 # so dividing by DP makes the threshold meaningful again.
                 if avg_depth is not None and dp is not None and dp >= HIGH_DEPTH_MULTIPLIER * avg_depth:
-                    qual = qual / dp
+                    qual = qual / (dp/avg_depth)
 
                 # if the annotation is not in non_gff_annotations, make the filter more stringent
                 if anno not in non_gff_annonations:

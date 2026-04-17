@@ -36,7 +36,7 @@ DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/pipeline_test
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=fks1test4 # Project name and date for bam header
+SEQID=noancfiltertest  # Project name and date for bam header
 REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
@@ -181,19 +181,22 @@ freebayes -f ${REF} \
         bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
 
         # Filters gatk_haplo by ancestor
+        #the ancestor files used here are NOT quality filtered
+        #that's because when we quality filter the ancestor, it leads to false positives in the evolved
+        #if you think you are missing stuff, you can change these to the quality filtered ancestor vcfs
         (>&2 echo ***Bedtools - Intersect***)
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo.vcf \
-                -b ${VCFDIR}/${ANC}_gatk_haplo_quality_filter.vcf \
+                -b ${VCFDIR}/${ANC}_gatk_haplo.vcf \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
 
         # Filters freebayes by ancestor 
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
-                -b ${VCFDIR}/${ANC}_freebayes_BCBio_quality_filter.vcf \
+                -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
 
-        # Filters lofreq by ancestor
+        Filters lofreq by ancestor
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
                 -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
