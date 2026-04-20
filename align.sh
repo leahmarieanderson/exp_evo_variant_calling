@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -S /bin/bash
-#$ -wd /net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff
-#$ -o /net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff/outputs/
-#$ -e /net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff/errors/
+#$ -wd /net/dunham/vol2/Leah/yEvo_echinocandins/pipeline_test
+#$ -o /net/dunham/vol2/Leah/yEvo_echinocandins/pipeline_test/outputs/
+#$ -e /net/dunham/vol2/Leah/yEvo_echinocandins/pipeline_test/errors/
 #$ -l mfree=8G
 #$ -l h_rt=36:0:0
 
@@ -32,11 +32,11 @@ module load fastqc/0.12.1
 FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
 ANC=$2
-DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/leah_resequencing_old_stuff
+DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/pipeline_test
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
 SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-SEQID=rereun_mhs_samples # Project name and date for bam header
+SEQID=outputOpt7 # Project name and date for bam header
 REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
@@ -47,154 +47,188 @@ VCFDIR=${WORKDIR}/${ANC}
 # provide the correct file path for ANC
 
 # Checks first if ANC name is provided in arguments
-if [ -n "$2" ]; then
-        # Check if a file exists in the 'fastq' directory and contains ${ANC} in its name
-        # Look for both paired-end (.fastq.gz) and single-end (.fastq.zip) patterns
-        if find "$DIR/$FOLDER" -type f \( -name "${ANC}_*" -o -name "${ANC}*.fastq.zip" \) | grep -q .; then
-            (>&2 echo A fastq file with sample name ${ANC} exists in the ${FOLDER} directory.)
-            # Check to see if ancestor.bam does not exists
-            if [ ! -e ${ANCBAM} ]; then
-            # Throw a warning that we cannot find the Ancestor bam and exit the shell script.
-                (>&2 echo ***${ANCBAM} cannot be found***)
-                (>&2 echo ***Need to create Ancestor bam or modify path***)
-                exit 1
-            fi
-        else
-            (>&2 echo No fastq file with sample name ${ANC} was found in the ${FOLDER} directory.)
-            (>&2 echo Possible misspelling of ancestor sample name or misplaced ancestor fastq file)
-            (>&2 echo 'Check your fastq folder or double check that you did not misspell')
-            # exit out
-            exit 1
-        fi
-fi
+# if [ -n "$2" ]; then
+#         # Check if a file exists in the 'fastq' directory and contains ${ANC} in its name
+#         # Look for both paired-end (.fastq.gz) and single-end (.fastq.zip) patterns
+#         if find "$DIR/$FOLDER" -type f \( -name "${ANC}_*" -o -name "${ANC}*.fastq.zip" \) | grep -q .; then
+#             (>&2 echo A fastq file with sample name ${ANC} exists in the ${FOLDER} directory.)
+#             # Check to see if ancestor.bam does not exists
+#             if [ ! -e ${ANCBAM} ]; then
+#             # Throw a warning that we cannot find the Ancestor bam and exit the shell script.
+#                 (>&2 echo ***${ANCBAM} cannot be found***)
+#                 (>&2 echo ***Need to create Ancestor bam or modify path***)
+#                 exit 1
+#             fi
+#         else
+#             (>&2 echo No fastq file with sample name ${ANC} was found in the ${FOLDER} directory.)
+#             (>&2 echo Possible misspelling of ancestor sample name or misplaced ancestor fastq file)
+#             (>&2 echo 'Check your fastq folder or double check that you did not misspell')
+#             # exit out
+#             exit 1
+#         fi
+# fi
 
-# Sets up folder structure
-mkdir -p ${WORKDIR}/${SAMPLE}
+# # Sets up folder structure
+# mkdir -p ${WORKDIR}/${SAMPLE}
 cd ${WORKDIR}/${SAMPLE}
 
-# Perform FastQC checks on our samples
-(>&2 echo ***FASTQC on SAMPLE ***)
+# # Perform FastQC checks on our samples
+# (>&2 echo ***FASTQC on SAMPLE ***)
 
-# Check for different FASTQ file patterns
-if ls ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz 1> /dev/null 2>&1; then
-    # Paired-end .fastq.gz files
-    FASTQ_TYPE="paired_gz"
-    fastqc ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
-    fastqc ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
-    # remove the zip file since the html file has everything we need to know
-    rm ${SAMPLE}_*R1*fastqc.zip
-    rm ${SAMPLE}_*R2*fastqc.zip
-elif ls ${SEQDIR}/${SAMPLE}*.fastq.zip 1> /dev/null 2>&1; then
-    # Single-end .fastq.zip files - need to extract first
-    FASTQ_TYPE="single_zip"
-    # Extract the zip file
-    unzip -o ${SEQDIR}/${SAMPLE}*.fastq.zip -d ${SEQDIR}/
-    # Find the extracted fastq file
-    EXTRACTED_FASTQ=$(find ${SEQDIR}/ -name "${SAMPLE}*.fastq" -type f | head -1)
-    if [ -z "$EXTRACTED_FASTQ" ]; then
-        echo "Error: Could not find extracted FASTQ file for ${SAMPLE}"
-        exit 1
-    fi
-    fastqc ${EXTRACTED_FASTQ} -o ${WORKDIR}/${SAMPLE}/
-    # remove the fastqc zip file
-    rm ${SAMPLE}*fastqc.zip
-else
-    echo "Error: Could not find FASTQ files for sample ${SAMPLE}"
-    echo "Looking for either ${SAMPLE}_*R1*.fastq.gz and ${SAMPLE}_*R2*.fastq.gz"
-    echo "or ${SAMPLE}*.fastq.zip"
-    exit 1
-fi
+# # Check for different FASTQ file patterns
+# if ls ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz 1> /dev/null 2>&1; then
+#     # Paired-end .fastq.gz files
+#     FASTQ_TYPE="paired_gz"
+#     fastqc ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
+#     fastqc ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz -o ${WORKDIR}/${SAMPLE}/
+#     # remove the zip file since the html file has everything we need to know
+#     rm ${SAMPLE}_*R1*fastqc.zip
+#     rm ${SAMPLE}_*R2*fastqc.zip
+# elif ls ${SEQDIR}/${SAMPLE}*.fastq.zip 1> /dev/null 2>&1; then
+#     # Single-end .fastq.zip files - need to extract first
+#     FASTQ_TYPE="single_zip"
+#     # Extract the zip file
+#     unzip -o ${SEQDIR}/${SAMPLE}*.fastq.zip -d ${SEQDIR}/
+#     # Find the extracted fastq file
+#     EXTRACTED_FASTQ=$(find ${SEQDIR}/ -name "${SAMPLE}*.fastq" -type f | head -1)
+#     if [ -z "$EXTRACTED_FASTQ" ]; then
+#         echo "Error: Could not find extracted FASTQ file for ${SAMPLE}"
+#         exit 1
+#     fi
+#     fastqc ${EXTRACTED_FASTQ} -o ${WORKDIR}/${SAMPLE}/
+#     # remove the fastqc zip file
+#     rm ${SAMPLE}*fastqc.zip
+# else
+#     echo "Error: Could not find FASTQ files for sample ${SAMPLE}"
+#     echo "Looking for either ${SAMPLE}_*R1*.fastq.gz and ${SAMPLE}_*R2*.fastq.gz"
+#     echo "or ${SAMPLE}*.fastq.zip"
+#     exit 1
+# fi
 
-# Align reads with bwa
-(>&2 echo ***BWA - mem -R***)
+# # Align reads with bwa
+# (>&2 echo ***BWA - mem -R***)
 
-if [ "$FASTQ_TYPE" = "paired_gz" ]; then
-    # Paired-end alignment
-    bwa mem -R "@RG\tID:${SEQID}\tSM:${SAMPLE}\tLB:1" ${REF} ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz > ${SAMPLE}_R1R2.sam
-elif [ "$FASTQ_TYPE" = "single_zip" ]; then
-    # Single-end alignment
-    bwa mem -R "@RG\tID:${SEQID}\tSM:${SAMPLE}\tLB:1" ${REF} ${EXTRACTED_FASTQ} > ${SAMPLE}_R1R2.sam
-fi
+# if [ "$FASTQ_TYPE" = "paired_gz" ]; then
+#     # Paired-end alignment
+#     bwa mem -R "@RG\tID:${SEQID}\tSM:${SAMPLE}\tLB:1" ${REF} ${SEQDIR}/${SAMPLE}_*R1*.fastq.gz ${SEQDIR}/${SAMPLE}_*R2*.fastq.gz > ${SAMPLE}_R1R2.sam
+# elif [ "$FASTQ_TYPE" = "single_zip" ]; then
+#     # Single-end alignment
+#     bwa mem -R "@RG\tID:${SEQID}\tSM:${SAMPLE}\tLB:1" ${REF} ${EXTRACTED_FASTQ} > ${SAMPLE}_R1R2.sam
+# fi
 
-mkdir -p dup_metrics
+# mkdir -p dup_metrics
 
-(>&2 echo ***GATK4 - MarkDuplicatesSpark and Sort***)
-# Previous align script had duplicates removed, this just has them marked down but not removed
-gatk MarkDuplicatesSpark \
-         -I ${SAMPLE}_R1R2.sam \
-         -M dup_metrics/${SAMPLE}_dup_metrics.txt \
-         -O ${SAMPLE}_R1R2_MD.sort.bam
+# (>&2 echo ***GATK4 - MarkDuplicatesSpark and Sort***)
+# # Previous align script had duplicates removed, this just has them marked down but not removed
+# gatk MarkDuplicatesSpark \
+#          -I ${SAMPLE}_R1R2.sam \
+#          -M dup_metrics/${SAMPLE}_dup_metrics.txt \
+#          -O ${SAMPLE}_R1R2_MD.sort.bam
 
-# Print stats on how well the alignment worked
-(>&2 echo ***Samtools - Flagstat***)
-samtools flagstat ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam
+# # Print stats on how well the alignment worked
+# (>&2 echo ***Samtools - Flagstat***)
+# samtools flagstat ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam
 
-# Remove intermediate files
-rm ${SAMPLE}_R1R2.sam
+# # Remove intermediate files
+# rm ${SAMPLE}_R1R2.sam
 
-(>&2 echo ***GATK4 - Calling Variants***)
-gatk HaplotypeCaller \
-     -R ${REF} \
-     -I ${SAMPLE}_R1R2_MD.sort.bam \
-     -O ${SAMPLE}_gatk_haplo.vcf
+# # for now, we don't know the known sites for variants for our yeast, so we will skip this step
+# # (>&2 echo ***GATK4 - BaseRecalibrator***)
 
-# Freebayes with a lot of arguments for population calling
-freebayes -f ${REF} \
-        --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 \
-        ${SAMPLE}_R1R2_MD.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
+# # 1. build the model
+# #gatk BaseRecalibrator \
+# #        -I ${SAMPLE}_R1R2_MD.sort.bam \
+# #        -R ${REF} --known-sites ${known_sites} \
+# #        -O ${SAMPLE}_recal_data.table
+
+
+# # 2. Apply the model to adjust the base quality scores
+# #gatk ApplyBQSR \
+# #        -I ${SAMPLE}_R1R2_MD.sort.bam \
+# #        -R ${REF} 
+# #        --bqsr-recal-file ${SAMPLE}_recal_data.table 
+# #        -O ${SAMPLE}_R1R2_MD.sort.bqrs.bam
+
+# (>&2 echo ***GATK4 - Calling Variants***)
+# gatk HaplotypeCaller \
+#      -R ${REF} \
+#      -I ${SAMPLE}_R1R2_MD.sort.bam \
+#      -O ${SAMPLE}_gatk_haplo.vcf
+
+#Freebayes
+# Haplotype length of 0 means that it will not attempt to call haplotypes and will just call variants independently. 
+# This is important for our yeast data since we have a lot of low frequency variants and we don't want to miss them by trying to call haplotypes. 
+# The --pooled-continuous argument allows freebayes to call variants in pooled samples and report allele frequencies instead of genotypes. 
+# The --report-genotype-likelihood-max argument reports the maximum genotype likelihoods for each variant, which can be useful for filtering later on. 
+# The --allele-balance-priors-off argument turns off the default priors for allele balance, which can be helpful for calling variants in pooled samples where the allele balance may not follow the expected distribution. 
+# The --min-alternate-fraction 0.1 argument sets a minimum threshold for the alternate allele fraction, which can help reduce false positives from sequencing errors.
+# freebayes -f ${REF} \
+#         --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 --haplotype-length 0 \
+#         ${SAMPLE}_R1R2_MD.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
 # Requires ANC from this line down
 # check if ANC argument was given. If there is, then continue with Ancestor filtering 
-if [ -n "$2" ]; then 
-        # Go to Work Directory
-        cd ${WORKDIR}/${SAMPLE}
-        (>&2 echo ***LoFreq - Somatic***)
-        lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam -f ${REF} \
-        -o ${SAMPLE}_lofreq_
+#  if [ -n "$2" ]; then 
+#         # Go to Work Directory
+#          cd ${WORKDIR}/${SAMPLE}
+#         (>&2 echo ***LoFreq - Somatic***)
+#         lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam -f ${REF} \
+#         -o ${SAMPLE}_lofreq_
 
-        # Unzips lofreq vcfs
-        bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
-        bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
-        bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
+#         # Unzips lofreq vcfs
+#         bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
+#         bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
+#         bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
 
-        # Filters gatk_haplo by ancestor
-        (>&2 echo ***Bedtools - Intersect***)
-        bedtools intersect -v -header \
-                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo.vcf \
-                -b ${VCFDIR}/${ANC}_gatk_haplo.vcf \
-                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered.vcf
+#         # Filters gatk_haplo by ancestor
+#         #the ancestor files used here are NOT quality filtered
+#         #that's because when we quality filter the ancestor, it leads to false positives in the evolved
+#         #if you think you are missing stuff, you can change these to the quality filtered ancestor vcfs
+#         (>&2 echo ***Bedtools - Intersect***)
+#         bedtools intersect -v -header \
+#                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo.vcf \
+#                 -b ${VCFDIR}/${ANC}_gatk_haplo.vcf \
+#                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
 
-        # Filters freebayes by ancestor 
-        bedtools intersect -v -header \
-                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
-                -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
-                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf
+#         # Filters freebayes by ancestor 
+#         bedtools intersect -v -header \
+#                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
+#                 -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
+#                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
 
-        # Filters lofreq by ancestor
-        bedtools intersect -v -header \
-                -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
-                -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
-                > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf
+#         #Filters lofreq by ancestor
+#         bedtools intersect -v -header \
+#                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
+#                 -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
+#                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered_temp.vcf
 
-        # Annotate the AncFiltered
-        (>&2 echo ***Annotate***)
-        python3 ${SCRIPTS}/annotation_final.py \
-                -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered.vcf \
-                -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-                -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-                -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+#         # Normalize indel representations so all callers use the same left-aligned, minimal anchor form
+#         #This makes the step combining vcfs easier and more accurate since the same indel will be represented in the same way across all vcfs
+#         (>&2 echo ***BCFtools - Normalize***)
+#         bcftools norm -f ${REF} -o ${SAMPLE}_gatk_haplo_AncFiltered.vcf ${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
+#         bcftools norm -f ${REF} -o ${SAMPLE}_freebayes_BCBio_AncFiltered.vcf ${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
+#         bcftools reheader -f ${REF}.fai ${SAMPLE}_lofreq_AncFiltered_temp.vcf > ${SAMPLE}_lofreq_AncFiltered_reheadered.vcf
+#         bcftools norm -f ${REF} -o ${SAMPLE}_lofreq_AncFiltered.vcf ${SAMPLE}_lofreq_AncFiltered_reheadered.vcf
 
-        python3 ${SCRIPTS}/annotation_final.py \
-                -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf \
-                -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-                -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-                -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+#         # Annotate the AncFiltered
+#         (>&2 echo ***Annotate***)
+#         python3 ${SCRIPTS}/annotation_final.py \
+#                 -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered.vcf \
+#                 -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+#                 -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+#                 -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
-        python3 ${SCRIPTS}/annotation_final.py \
-                -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf \
-                -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
-                -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
-                -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+#         python3 ${SCRIPTS}/annotation_final.py \
+#                 -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered.vcf \
+#                 -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+#                 -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+#                 -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
+
+#         python3 ${SCRIPTS}/annotation_final.py \
+#                 -f ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered.vcf \
+#                 -s ${ANNOTATE}/orf_coding_all_R64-1-1_20110203.fasta \
+#                 -n ${ANNOTATE}/saccharomyces_cerevisiae_R64-1-1_20110208.gff.filtered \
+#                 -g ${ANNOTATE}/S288C_reference_sequence_R64-1-1_20110203.fsa
 
         # Many filtering steps
         # MQ or MQM = Mapping quality
@@ -206,18 +240,29 @@ if [ -n "$2" ]; then
 
         (>&2 echo ***Apply Stringent Filter Based on Variant Caller and Return Combined CSV***)
 
+        # Compute mean nuclear read depth (excluding chrM) to detect anomalously high-coverage
+        # regions (mtDNA, TEs, repeats) where raw QUAL scores are inflated.
+        AVG_DEPTH=$(samtools coverage ${SAMPLE}_R1R2_MD.sort.bam \
+            | awk 'NR>1 && $1!="chrM" {total += $7 * ($3-$2+1); bases += ($3-$2+1)} \
+                   END {if (bases > 0) printf "%.4f", total/bases; else print "0"}')
+        (>&2 echo Average nuclear read depth: ${AVG_DEPTH})
+
         # After, we would like to create a csv with just the necessary information
         python3 ${SCRIPTS}/stringent_filter.py \
+        --avg-depth ${AVG_DEPTH} \
         ${SAMPLE}_gatk_haplo_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_freebayes_BCBio_AncFiltered_annotated_vcf.txt \
         ${SAMPLE}_lofreq_AncFiltered_annotated_vcf.txt
 
         (>&2 echo ***Make BED Files to view in IGV***)
         python3 ${SCRIPTS}/makeBED.py \
-                -i ${SAMPLE}_final_stringent_compiled.txt \
-                -o1 ${SAMPLE}_final_stringent_compiled_3callers.bed \
-                -o2 ${SAMPLE}_final_stringent_compiled_2callers.bed \
-                -o3 ${SAMPLE}_final_stringent_compiled_1caller.bed
+                -i1 ${SAMPLE}_stringent_compiled.txt \
+                -i2 ${SAMPLE}_final_stringent_compiled.txt \
+                -o1 ${SAMPLE}_all_variants.bed \
+                -o2 ${SAMPLE}_highConfidenceVars.bed
+
+        mkdir -p ${DIR}/final-results-all
+        cp ${SAMPLE}_highConfidenceVars.bed ${DIR}/final-results-all/
 
         # remove all the lofreq intermediate files
         rm ${SAMPLE}_lofreq_normal_relaxed.log
@@ -248,11 +293,11 @@ else
 
 (>&2 echo ***BCFtools - Filter***)
 bcftools filter -O v -o ${SAMPLE}_gatk_haplo_quality_filter.vcf \
-        -i 'MQ>30 & QUAL>75 & (INFO/DP)>40 & (INFO/SOR)<3' \
+        -i 'MQ>30 & QUAL>75 & (INFO/DP)>10 & (INFO/SOR)<6' \
         ${SAMPLE}_gatk_haplo.vcf
 
 bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_quality_filter.vcf \
-        -i 'MQM>30 & QUAL>20 & INFO/DP>10 & (SAF+SAR)>4 & (SRF+SAF)/(INFO/DP)>0.01 & (SRR+SAR)/(INFO/DP)>0.01' \
+        -i 'QUAL>20 && INFO/DP>10 && INFO/AO>2' \
         ${SAMPLE}_freebayes_BCBio.vcf
 
 (>&2 echo ***Ancestor Quality Filter completed***)

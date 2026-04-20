@@ -2,28 +2,32 @@ import csv
 import argparse
 import os
 
+# If a variant's depth exceeds this multiple of the sample average, normalize QUAL by dividing by DP.
+# This prevents inflated scores at high-coverage regions (mtDNA, TEs, tandem repeats) from passing the filter.
+HIGH_DEPTH_MULTIPLIER = 4
+
 # filter values for a gatk called file
-GATK_QUAL_THRES = 125
-GATK_DP_THRES = 35
-GATK_Non_Coding_QUAL_THRES = 250
-GATK_Telomere_QUAL_THRES = 500
+GATK_QUAL_THRES = 150
+GATK_DP_THRES = 10
+GATK_Non_Coding_QUAL_THRES = 300
+GATK_Telomere_QUAL_THRES = 600
 
 # filter values for a freebayes called file
-FB_QUAL_THRES = 20
+FB_QUAL_THRES = 75
 FB_DP_THRES = 10
-FB_Non_Coding_QUAL_THRES = 600
-FB_Telomere_QUAL_THRES = 650
+FB_Non_Coding_QUAL_THRES = 300
+FB_Telomere_QUAL_THRES = 600
 
 # filter values for a lofreq called file
-LOFREQ_QUAL_THRES = 20
-LOFREQ_DP_THRES = 20
-LOFREQ_Non_Coding_QUAL_THRES = 40
-LOFREQ_Telomere_QUAL_THRES = 80
+LOFREQ_QUAL_THRES = 75
+LOFREQ_DP_THRES = 10
+LOFREQ_Non_Coding_QUAL_THRES = 300
+LOFREQ_Telomere_QUAL_THRES = 600
 
-non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron"]
+non_gff_annonations = ["missense", "intergenic", "synonymous", "5'-upstream", "nonsense", "indel-frameshift", "indel-inframe", "intron", "multi-allelic"]
 
 # use unique filters on the txt file (which represents our simpified vcf file)
-def caller_filter(caller_name, input_file, output_file):
+def caller_filter(caller_name, input_file, output_file, avg_depth=None):
     caller_QUAL_THRES = 0
     caller_DP_THRES = 0
     caller_NC_QUAL_THRES = 0
@@ -75,34 +79,42 @@ def caller_filter(caller_name, input_file, output_file):
             if caller_name == "gatk":
                 mq = None
                 sor = None
+                is_indel = len(row_dict['REF']) != len(row_dict['ALT'])
+                sor_threshold = 10 if is_indel else 3
                 # Parse DP from INFO field since INFO field contains many variables
                 for entry in info.split(';'):
-                    
+
                     if entry.startswith('DP='): # get DP
                         dp = float(entry.split('=')[1])
-                    
+
                     if entry.startswith('SOR='):
                         sor = float(entry.split('=')[1])
-                    
+
                     if entry.startswith('MQ='): # get MQ
                         mq = float(entry.split('=')[1])
+
+                # If depth is much higher than the sample average, normalize QUAL by DP.
+                # High coverage inflates raw QUAL at mtDNA, TEs, and repetitive regions,
+                # so dividing by DP makes the threshold meaningful again.
+                if avg_depth is not None and dp is not None and dp >= HIGH_DEPTH_MULTIPLIER * avg_depth:
+                    qual = qual / (dp/avg_depth)
 
                 # if the annotation is not in non_gff_annotations, make the filter more stringent
                 if anno not in non_gff_annonations:
                     # If telomere, then use the telomere qual value threshold
                     if anno == "telomere":
-                        if (all(val is not None for val in [mq, sor, dp]) 
-                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mq > 30 and sor < 3
+                        if (all(val is not None for val in [mq, sor, dp])
+                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2
+                            and mq > 30 and sor < sor_threshold
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
-                    else: 
+                    else:
                         # Apply stringent filters since it is non-coding
-                        if (all(val is not None for val in [mq, sor, dp]) 
-                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mq > 30 and sor < 3
+                        if (all(val is not None for val in [mq, sor, dp])
+                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2
+                            and mq > 30 and sor < sor_threshold
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
@@ -110,7 +122,7 @@ def caller_filter(caller_name, input_file, output_file):
                 else: # it's coding, just apply regular stringent filter based on the type of caller was used
                     if (all(val is not None for val in [mq, sor, dp])  # all variables aren't None
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES  # greater than or equal to our QUAL and DP thresholds
-                        and mq > 30 and sor < 3
+                        and mq > 30 and sor < sor_threshold
                         ):
                         # Create a filtered row with only the selected columns
                         filtered_row = [row_dict[col] for col in filtered_fieldnames]
@@ -123,6 +135,8 @@ def caller_filter(caller_name, input_file, output_file):
                 srr = None # Number of reference observations on the reverse strand
                 saf = None # Number of alternate observations on the forward strand
                 sar = None # Number of alternate observations on the reverse strand
+                rpl = None # Number of alt reads placed on the left (5') end
+                rpr = None # Number of alt reads placed on the right (3') end
                 
                 # Parse DP from INFO field since INFO field contains many variables
                 for entry in info.split(';'):
@@ -149,37 +163,54 @@ def caller_filter(caller_name, input_file, output_file):
                     elif entry.startswith('SRR='): # get SRR
                         num_reads = entry.split('=')[1].split(',') # Get value(s) after 'SRR=' there will be more than one value if it is multi-allelic
                         srr = sum(float(read_num) for read_num in num_reads)
+
+                    elif entry.startswith('RPL='): # get RPL
+                        num_reads = entry.split('=')[1].split(',') # Get value(s) after 'RPL=' to make sure the alt allele isn't all on one side
+                        rpl = sum(float(read_num) for read_num in num_reads)
+
+                    elif entry.startswith('RPR='): # get RPR
+                        num_reads = entry.split('=')[1].split(',') # Get value(s) after 'RPR=' (same as above)
+                        rpr = sum(float(read_num) for read_num in num_reads)
                 
+                # If depth is much higher than the sample average, normalize QUAL by DP.
+                # High coverage inflates raw QUAL at mtDNA, TEs, and repetitive regions,
+                # so dividing by DP makes the threshold meaningful again.
+                if avg_depth is not None and dp is not None and dp >= HIGH_DEPTH_MULTIPLIER * avg_depth:
+                    qual = qual / (dp/avg_depth)
+
                 # if the annotation is not in non_gff_annotations, make the filter more stringent
                 if anno not in non_gff_annonations:
                     # If telomere, then use the telomere qual value threshold
                     if anno == "telomere":
-                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
-                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mqm > 30 and (saf + sar) > 4 
-                            and ((srf + saf)/ dp) > 0.01 
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr, rpl, rpr])
+                            and qual >= caller_TELOMERE_QUAL_THRES and dp >= caller_DP_THRES * 2
+                            and mqm > 30 and (saf + sar) > 4
+                            and ((srf + saf)/ dp) > 0.01
                             and ((srr + sar)/ dp) > 0.01
+                            and rpl > 0 and rpr > 0
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
-                    else: 
+                    else:
                         # Apply stringent filters since it is non-coding
-                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
-                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2 
-                            and mqm > 30 and (saf + sar) > 4 
-                            and ((srf + saf)/ dp) > 0.01 
+                        if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr, rpl, rpr])
+                            and qual >= caller_NC_QUAL_THRES and dp >= caller_DP_THRES * 2
+                            and mqm > 30 and (saf + sar) > 4
+                            and ((srf + saf)/ dp) > 0.01
                             and ((srr + sar)/ dp) > 0.01
+                            and rpl > 0 and rpr > 0
                             ):
                             # Create a filtered row with only the selected columns
                             filtered_row = [row_dict[col] for col in filtered_fieldnames]
                             writer.writerow(filtered_row)
                 else: # it's coding, just apply regular stringent filter based on the type of caller was used
-                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr]) 
+                    if (all(val is not None for val in [dp, mqm, saf, sar, srf, srr, rpl, rpr])
                         and qual >= caller_QUAL_THRES and dp >= caller_DP_THRES
-                        and mqm > 30 and (saf + sar) > 4 
-                        and ((srf + saf)/ dp) > 0.01 
+                        and mqm > 30 and (saf + sar) > 4
+                        and ((srf + saf)/ dp) > 0.01
                         and ((srr + sar)/ dp) > 0.01
+                        and rpl > 0 and rpr > 0
                         ):
                         # Create a filtered row with only the selected columns
                         filtered_row = [row_dict[col] for col in filtered_fieldnames]
@@ -244,7 +275,7 @@ def caller_filter(caller_name, input_file, output_file):
                         writer.writerow(filtered_row)
 
 # filters the annotated_vcf.txt files and converts them into csv format
-def filter_vcf(input_file):
+def filter_vcf(input_file, avg_depth=None):
     # variables so we can set filter thresholds appropriately
     caller_name = ""
 
@@ -277,7 +308,7 @@ def filter_vcf(input_file):
     csv_name = input_file.replace("_annotated_vcf.txt", "_condensed.txt")
 
     # Filter the temp file we created based on caller used to call the variants
-    caller_filter(caller_name, "temp.txt", csv_name)
+    caller_filter(caller_name, "temp.txt", csv_name, avg_depth=avg_depth)
     
     # remove temp.txt
     if os.path.exists("temp.txt"):
@@ -298,8 +329,22 @@ def chromosome_conversion(chrom_number):
 	except ValueError:			
 		return chrom_conv[chrom_number]
 
+def load_gene_info():
+    gene_info_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gene_info.csv')
+    gene_map = {}
+    if os.path.exists(gene_info_path):
+        with open(gene_info_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                gene_map[row['REGION']] = row['GENE']
+    return gene_map
+
+def lookup_gene_names(region_str, gene_map):
+    names = [gene_map.get(r, '') for r in region_str.split(';')]
+    return ';'.join(names)
+
 # given a csv, sort based on the CHROM column and POS column
-def sort_csv(csv_name):
+def sort_csv(csv_name, gene_map=None):
     with open(csv_name, 'r', newline='') as infile:
         reader = csv.DictReader(infile, delimiter='\t')
         rows = list(reader)
@@ -312,6 +357,9 @@ def sort_csv(csv_name):
             rows,
             key=lambda x: (
                 -int(x['NUM_OCCURRENCES']),
+                -float(x["QUAL_lofreq"] or 0),
+                -float(x["QUAL_freebayes"] or 0),
+                -float(x["QUAL_gatk"] or 0),
                 chromosome_conversion(x['CHROM']),
                 int(x['POS'])
             )
@@ -319,21 +367,25 @@ def sort_csv(csv_name):
 
         final_result_name = csv_name.replace(
             'all_condensed.txt',
-            'final_stringent_compiled.txt'
+            'stringent_compiled.txt'
         )
 
+        region_idx = reader.fieldnames.index('REGION')
+        fieldnames = reader.fieldnames[:region_idx + 1] + ['GENE'] + reader.fieldnames[region_idx + 1:]
+
         with open(final_result_name, 'w', newline='') as outfile:
-            fieldnames = reader.fieldnames
             writer = csv.DictWriter(outfile, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            writer.writerows(rows_sorted)
+            for row in rows_sorted:
+                row['GENE'] = lookup_gene_names(row['REGION'], gene_map or {})
+                writer.writerow(row)
 
 
-def main(all_file_names):
+def main(all_file_names, avg_depth=None):
     # convert annotated txt files into csv files
     converted_files = []
     for txtfile in all_file_names:
-        csv_name = filter_vcf(txtfile)
+        csv_name = filter_vcf(txtfile, avg_depth=avg_depth)
         converted_files.append(csv_name)
     
     # Input CSV files
@@ -362,19 +414,29 @@ def main(all_file_names):
             reader = csv.DictReader(f,  delimiter="\t")
             reader.fieldnames = [name.strip() for name in reader.fieldnames]
             for row in reader:
-                key = (row["CHROM"], row["POS"], row["REF"], row["ALT"], row["ANNOTATION"], row["REGION"], row["PROTEIN"])
+                key = (row["CHROM"], row["POS"])
 
                 if key not in variant_dict:
                     variant_dict[key] = {
-                        "NUM_OCCURRENCES": 0,
+                        "REF": [],
+                        "ALT": [],
+                        "ANNOTATION": [],
+                        "REGION": [],
+                        "PROTEIN": [],
+                        "callers_seen": set(),
                         "QUAL_gatk": None,
                         "QUAL_freebayes": None,
                         "QUAL_lofreq": None
                     }
-                
+
+                entry = variant_dict[key]
+                for field in ["REF", "ALT", "ANNOTATION", "REGION", "PROTEIN"]:
+                    if row[field] not in entry[field]:
+                        entry[field].append(row[field])
+
                 # Update count and QUAL value for the specific tool
-                variant_dict[key]["NUM_OCCURRENCES"] += 1
-                variant_dict[key][f"QUAL_{source}"] = row["QUAL"]
+                entry["callers_seen"].add(source)
+                entry[f"QUAL_{source}"] = row["QUAL"]
 
     sample_name = converted_files[0]
     for suffix in ["_gatk_haplo_AncFiltered_condensed.txt",
@@ -392,26 +454,49 @@ def main(all_file_names):
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
         
-        for (CHROM, POS, REF, ALT, ANNOTATION, REGION, PROTEIN), values in variant_dict.items():
+        for (CHROM, POS), values in variant_dict.items():
             writer.writerow({
-                "CHROM": CHROM, "POS": POS, "REF": REF, "ALT": ALT, 
-                "ANNOTATION": ANNOTATION, "REGION": REGION, "PROTEIN": PROTEIN,
-                "NUM_OCCURRENCES": values["NUM_OCCURRENCES"],
+                "CHROM": CHROM,
+                "POS": POS,
+                "REF": ";".join(values["REF"]),
+                "ALT": ";".join(values["ALT"]),
+                "ANNOTATION": ";".join(values["ANNOTATION"]),
+                "REGION": ";".join(values["REGION"]),
+                "PROTEIN": ";".join(values["PROTEIN"]),
+                "NUM_OCCURRENCES": len(values["callers_seen"]),
                 "QUAL_gatk": values["QUAL_gatk"],
                 "QUAL_freebayes": values["QUAL_freebayes"],
                 "QUAL_lofreq": values["QUAL_lofreq"]
             })
 
-    sort_csv(temp) # sort the combined csv file
+    sort_csv(temp, gene_map=load_gene_info()) # sort the combined csv file
     # get rid of the intermediate csv file
     if os.path.exists(temp):
         os.remove(temp)
 
-    print("Combined CSV saved to " + sample_name + "_final_stringent_compiled.txt")
+    stringent_compiled = sample_name + "_stringent_compiled.txt"
+    final_compiled = sample_name + "_final_stringent_compiled.txt"
+
+    with open(stringent_compiled, 'r', newline='') as infile, \
+         open(final_compiled, 'w', newline='') as outfile:
+        reader = csv.DictReader(infile, delimiter='\t')
+        writer = csv.DictWriter(outfile, fieldnames=reader.fieldnames, delimiter='\t')
+        writer.writeheader()
+        for row in reader:
+            if int(row['NUM_OCCURRENCES']) >= 2:
+                writer.writerow(row)
+
+    print("All variants saved to " + stringent_compiled)
+    print("2+ caller variants saved to " + final_compiled)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Combine multiple CSV files into one.")
     parser.add_argument("all_file_names", type=str, nargs='+', help="Names of files to filter and combine (assumed to be in the current directory).")
-    
+    parser.add_argument("--avg-depth", type=float, default=None,
+                        help="Mean nuclear read depth for the sample (computed from the BAM). "
+                             "When a variant's DP exceeds avg_depth * 4, QUAL is replaced with "
+                             "QUAL/(DP/avg_depth) before applying the normal quality threshold, preventing "
+                             "inflated scores in high-coverage regions such as mtDNA, TEs, and tandem repeats.")
+
     args = parser.parse_args()
-    main(args.all_file_names)
+    main(args.all_file_names, avg_depth=args.avg_depth)

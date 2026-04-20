@@ -145,6 +145,7 @@ def main(vcf, orfs, noncoding_file, genome_file):
 						l = line.strip().split('\t')
 						if(',' in l[Alt]): # There is more than one allele transformation
 							print('\t'.join(l + ['multi-allelic', genes[g][0], 'NA']), file=f_out)
+							annotation = True
 						else:
 							#loop through codons, find mismatch
 							for codon in range(0, len(mut_gene), 3):
@@ -215,6 +216,7 @@ def main(vcf, orfs, noncoding_file, genome_file):
 						l = line.strip().split('\t')
 						if(',' in l[Alt]): # There is more than one allele transformation
 							print('\t'.join(l + ['multi-allelic', genes[g][0], 'NA']), file=f_out)
+							annotation = True
 						else:
 							#loop through codons, find mismatch
 							for codon in range(0, len(mut_gene), 3):
