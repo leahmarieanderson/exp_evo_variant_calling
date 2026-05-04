@@ -166,9 +166,7 @@ After the job has finished running, you should have a new directory called `Work
     └── WorkDirectory
         └── my_ancestor_strain
             ├── dup_metrics
-            ├── anc_AB_freebayes_BCBio_quality_filter.vcf
             ├── anc_AB_freebayes_BCBio.vcf
-            ├── anc_AB_gatk_haplo_quality_filter.vcf
             ├── anc_AB_gatk_haplo.vcf
             ├── anc_AB_gatk_haplo.vcf.idx
             ├── anc_AB_R1R2_MD.sort.bam
@@ -182,12 +180,10 @@ After the job has finished running, you should have a new directory called `Work
 
 1. `dup_metrics` is a directory which contains the duplicate metrics of the ancestor strain. It may be interesting to look at the `READ_PAIR_DUPLICATES` column to see how many read pairs were flagged as duplicates, or look at the `PERCENTAGE_DUPLICATION` column to see what percent of the reads are duplicates.
 2. `anc_AB_freebayes_BCBio.vcf` is the output of one of the 2 variant callers that we call on the ancestor (FreeBayes).
-3. `anc_AB_freebayes_BCBio_quality_filter.vcf` is a post-processed vcf file of the freebayes output where we filter out some reads based on certain thresholds on mapping quality, read depth, and other metrics.
-4. `anc_AB_gatk_haplo.vcf` is the output of one of the 2 variant callers that we call on the ancestor (FreeBayes).
-5. `anc_AB_gatk_haplo_quality_filter.vcf` is a post-processed vcf file of the GATK HaplotypeCaller output where we filter out reads based on mapping quality, read depth, and other metrics.
-6. `anc_AB_gatk_haplo.vcf.idx` is an index file for the GATK HaplotypeCaller output.
-7. `anc_AB_R1R2_MD.sort.bam`, `anc_AB_R1R2_MD.sort.bam.bai`, and `anc_AB_R1R2_MD.sort.bam.sbi` are the typical `.bam` file outputs that we get.
-8. `anc_AB_S1_R1_001_fastqc.html` and `anc_AB_S1_R2_001_fastqc.html` are Fastq Quality Control Check outputs which can tell us analytical statistics on each of the short reads. 
+3. `anc_AB_gatk_haplo.vcf` is the output of one of the 2 variant callers that we call on the ancestor (FreeBayes).
+4. `anc_AB_gatk_haplo.vcf.idx` is an index file for the GATK HaplotypeCaller output.
+5. `anc_AB_R1R2_MD.sort.bam`, `anc_AB_R1R2_MD.sort.bam.bai`, and `anc_AB_R1R2_MD.sort.bam.sbi` are the typical `.bam` file outputs that we get.
+6. `anc_AB_S1_R1_001_fastqc.html` and `anc_AB_S1_R2_001_fastqc.html` are Fastq Quality Control Check outputs which can tell us analytical statistics on each of the short reads. 
 
 ### Align and Annotate Evolved Sample
 Now we want to align and annotate the evolved samples. We have two methods of doing this. 
@@ -241,27 +237,28 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
         ├── my_ancestor_sample
         └── sample1  *NEW*
             ├── dup_metrics
-            ├── sample1_final_stringent_compiled_1caller.bed
-            ├── sample1_final_stringent_compiled_2caller.bed
-            ├── sample1_final_stringent_compiled_3caller.bed
+            ├── sample1_all_variants.bed
             ├── sample1_final_stringent_compiled.txt <-- compiled results from all 3 callers
-            ├── sample1_freebayes_BCBio_AncFiltered.vcf
             ├── sample1_freebayes_BCBio_AncFiltered_annotated_vcf.txt
             ├── sample1_freebayes_BCBio_AncFiltered_condensed.txt
+            ├── sample1_freebayes_BCBio_AncFiltered.vcf
             ├── sample1_freebayes_BCBio.vcf
-            ├── sample1_gatk_haplo_AncFiltered.vcf
             ├── sample1_gatk_haplo_AncFiltered_annotated_vcf.txt
             ├── sample1_gatk_haplo_AncFiltered_condensed.txt
+            ├── sample1_gatk_haplo_AncFiltered.vcf
             ├── sample1_gatk_haplo.vcf
             ├── sample1_gatk_haplo.vcf.idx
-            ├── sample1_lofreq_AncFiltered.vcf
+            ├── sample1_highConfidenceVars.bed
             ├── sample1_lofreq_AncFiltered_annotated_vcf.txt
             ├── sample1_lofreq_AncFiltered_condensed.txt
+            ├── sample1_lofreq_AncFiltered_reheadered.vcf
+            ├── sample1_lofreq_AncFiltered.vcf
             ├── sample1_R1R2_MD.sort.bam
             ├── sample1_R1R2_MD.sort.bam.bai
             ├── sample1_R1R2_MD.sort.bam.sbi
             ├── sample1_S1_R1_001_fastqc.html
-            └── sample1_S1_R2_001_fastqc.html
+            ├── sample1_S1_R2_001_fastqc.html
+            └── sample1_stringent_compiled.txt 
 ```
 ### Output File explanation
 
@@ -273,9 +270,11 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
 
 - The `freebayes_BCBio_AncFiltered_condensed.txt`, `lofreq_AncFiltered_condensed.txt`, and `gatk_haplo_AncFiltered_condensed.txt` are the same files as the ones mentioned above but we applyed a unique set of filter conditions for each file based on their specific variant caller and we condense the columns. The `_condensed.csv` files only show the columns that are relevant for our analysis. Such columns like `CHROM`, `POS`, `REF`, `ALT`, `ANNOTATION`, `REGION`, and `PROTEIN`. For the filter, a file's particular variant caller changes the filter conditions for `QUAL`,`DP`, and number of reads on the ref and alt alleles. We would keep any variants that pass the specified threshold for `QUAL`, `DP`, etc. 
 
-- The `final_stringent_compiled.txt` file is a combination of the `freebayes_BCBio_AncFiltered_condensed.txt`, `lofreq_AncFiltered_condensed.txt`, and `gatk_haplo_AncFiltered_condensed.txt` that has been sorted, removed duplicates, and added an additional column `NUM_OCCURANCES` that counts the number of times this variant has shown between the different variant callers. The higher this value, the more reliable this variant is since it means it was called by more variant callers.
+- The `lofreq_AncFiltered_reheadered.vcf` is just the `lofreq_AncFiltered.vcf` file but reformatted to be compatible for data processing.
+
+- The `final_stringent_compiled.txt` file contains the variants that were present in at least 2 out of 3 variant callers. This means that these are most likely real variants. 
   
-- The `final_stringent_compiled_1caller.bed`, `final_stringent_compiled_2caller.bed`, and `final_stringent_compiled_3caller.bed` files are files which show the respective variants which are called by 1, 2, or 3 callers. It is recommended to use these bed files to check each variant in a genome alignment viewing software such as IGV: https://igv.org/
+- The `all_variants.bed` show all the variants that were called by our pipeline, while the `final_stringent_compiled_3caller.bed` file show the respective variants which are called by 2+ callers. It is recommended to use these bed files to check each variant in a genome alignment viewing software such as IGV: https://igv.org/
 
 By opening the `final_stringent_compiled.txt` file in a program like Microsoft Excel, you can sort the called variants by quality score and/or number of occurrences across the different variant callers.
 
