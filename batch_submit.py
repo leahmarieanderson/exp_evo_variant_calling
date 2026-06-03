@@ -17,7 +17,10 @@ def submit_job(script_name, sample_name, ancestor_name):
         lines = file.readlines()
 
     # Print job submission details
-    print(f"Submitting job for sample: {sample_name} with ancestor: {ancestor_name}")
+    if ancestor_name == "--yevo":
+        print(f"Submitting job for sample: {sample_name} with yevo settings")
+    else:
+        print(f"Submitting job for sample: {sample_name} with ancestor: {ancestor_name}")
     
     # Run the command to submit the job
     subprocess.run(['qsub', '-N', "MD" + sample_name, script_name, sample_name, ancestor_name])
@@ -274,7 +277,12 @@ def main():
     # prompts user if they want to qsub all samples(except ancestor) in their ${DIR}/${FOLDER} i.e. your fastq folder
     user_submit = input(f"Would you like to qsub all samples in {fastq_dir} ? (y/n) : ")
     if user_submit.lower() == 'y':
-        ancestor_name = input("What is the name of the ancestor? : ")
+        # check if it is a yevo experiment 
+        yevo_exp = input("Is this a yevo experiment? (y/n) : ")
+        if yevo_exp.lower() == 'y':
+            multi_qsub(script_name, fastq_dir, "--yevo")
+        else:
+            ancestor_name = input("What is the name of the ancestor? : ")
         # check if ancestor directory even exists in WorkDirectory
 
         if os.path.isdir(DIR_option[4:] + "/WorkDirectory"):
