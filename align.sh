@@ -11,6 +11,16 @@
 ## Chris Large and Caiti S. Heil. Modified for Bryce Taylor and Ryan Skophammer
 ## Uses the recommended SNP calling pipeline from Samtools
 ## Then filters based on the ancestral sequence
+##
+## Usage:
+##   Standard mode (with per-experiment ancestor):
+##     qsub align_script.sh <SAMPLE> <ANC>
+##
+##   yEvo mode (uses prebuilt master ancestor VCFs, no ancestor BAM or ANC argument needed):
+##     qsub align_script.sh <SAMPLE> --yevo
+##
+##   No ancestor filtering:
+##     qsub align_script.sh <SAMPLE>
 
 module load modules modules-init modules-gs
 module load zlib/1.3.1
@@ -31,7 +41,20 @@ module load fastqc/0.12.1
 
 FOLDER=fastq
 SAMPLE=$1 # Passed sample prefix (ex: Sample-01)
-ANC=$2
+
+# Flexible argument parsing:
+#   Standard mode:  qsub align_script.sh <SAMPLE> <ANC>
+#   yEvo mode:      qsub align_script.sh <SAMPLE> --yevo
+#   No filtering:   qsub align_script.sh <SAMPLE>
+USE_MASTER_VCFS=false
+ANC=""
+for arg in "$2" "$3"; do
+    if [ "${arg}" = "--yevo" ]; then
+        USE_MASTER_VCFS=true
+    elif [ -n "${arg}" ]; then
+        ANC="${arg}"
+    fi
+done
 DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/yEvo_sequencing_260416
 WORKDIR=${DIR}/WorkDirectory # Where files will be created
 SEQDIR=${DIR}/${FOLDER} # Location of Fastqs
@@ -39,33 +62,46 @@ SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
 SEQID=april2026seq # Project name and date for bam header
 REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
 ANNOTATE=${SCRIPTS}/genomes # Location of custom annotation scripts
+
+# Master ancestor VCF paths (used when --yevo flag is passed)
+MASTER_VCF_DIR=${WORKDIR}/master_ancestor_vcf
+MASTER_GATK_VCF=${MASTER_VCF_DIR}/master_ancestor_gatk_haplo.vcf
+MASTER_FREEBAYES_VCF=${MASTER_VCF_DIR}/master_ancestor_freebayes_BCBio.vcf
+MASTER_LOFREQ_VCF=${MASTER_VCF_DIR}/master_ancestor_lofreq.vcf
+
+# Per-experiment ancestor paths (used in standard mode)
 ANCBAM=${WORKDIR}/${ANC}/${ANC}_R1R2_MD.sort.bam
 VCFDIR=${WORKDIR}/${ANC}
 
-# In the case where ANC argument is given incorrectly, we don't want to take an hour creating files
-# only to find out later on our code stopped working because we misspelled something or we didn't
-# provide the correct file path for ANC
+# -------------------------------------------------
+# Validate ancestor inputs based on run mode
+# -------------------------------------------------
 
-#Checks first if ANC name is provided in arguments
-if [ -n "$2" ]; then
-        # Check if a file exists in the 'fastq' directory and contains ${ANC} in its name
-        # Look for both paired-end (.fastq.gz) and single-end (.fastq.zip) patterns
-        if find "$DIR/$FOLDER" -type f \( -name "${ANC}_*" -o -name "${ANC}*.fastq.zip" \) | grep -q .; then
-            (>&2 echo A fastq file with sample name ${ANC} exists in the ${FOLDER} directory.)
-            # Check to see if ancestor.bam does not exists
-            if [ ! -e ${ANCBAM} ]; then
-            # Throw a warning that we cannot find the Ancestor bam and exit the shell script.
-                (>&2 echo ***${ANCBAM} cannot be found***)
-                (>&2 echo ***Need to create Ancestor bam or modify path***)
-                exit 1
-            fi
-        else
-            (>&2 echo No fastq file with sample name ${ANC} was found in the ${FOLDER} directory.)
-            (>&2 echo Possible misspelling of ancestor sample name or misplaced ancestor fastq file)
-            (>&2 echo 'Check your fastq folder or double check that you did not misspell')
-            # exit out
+if [ "${USE_MASTER_VCFS}" = true ]; then
+    # yEvo mode: verify master VCFs exist; no ancestor BAM or ANC argument needed
+    (>&2 echo "***Running in yEvo mode: using master ancestor VCFs for filtering***")
+    for VCF in "${MASTER_GATK_VCF}" "${MASTER_FREEBAYES_VCF}" "${MASTER_LOFREQ_VCF}"; do
+        if [ ! -f "${VCF}" ]; then
+            (>&2 echo "***ERROR: Master ancestor VCF not found: ${VCF}***")
             exit 1
         fi
+    done
+    (>&2 echo "Master ancestor VCFs verified.")
+elif [ -n "${ANC}" ]; then
+    # Standard mode: verify ancestor fastq and BAM exist
+    if find "$DIR/$FOLDER" -type f \( -name "${ANC}_*" -o -name "${ANC}*.fastq.zip" \) | grep -q .; then
+        (>&2 echo "A fastq file with sample name ${ANC} exists in the ${FOLDER} directory.")
+        if [ ! -e ${ANCBAM} ]; then
+            (>&2 echo "***${ANCBAM} cannot be found***")
+            (>&2 echo "***Need to create Ancestor bam or modify path***")
+            exit 1
+        fi
+    else
+        (>&2 echo "No fastq file with sample name ${ANC} was found in the ${FOLDER} directory.")
+        (>&2 echo "Possible misspelling of ancestor sample name or misplaced ancestor fastq file")
+        (>&2 echo "Check your fastq folder or double check that you did not misspell")
+        exit 1
+    fi
 fi
 
 # Sets up folder structure
@@ -150,19 +186,60 @@ freebayes -f ${REF} \
         --pooled-continuous --report-genotype-likelihood-max --allele-balance-priors-off --min-alternate-fraction 0.1 --haplotype-length 0 \
         ${SAMPLE}_R1R2_MD.sort.bam > ${SAMPLE}_freebayes_BCBio.vcf
 
-#Requires ANC from this line down
-check if ANC argument was given. If there is, then continue with Ancestor filtering 
- if [ -n "$2" ]; then 
-        # Go to Work Directory
-         cd ${WORKDIR}/${SAMPLE}
-        (>&2 echo ***LoFreq - Somatic***)
-        lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam -f ${REF} \
-        -o ${SAMPLE}_lofreq_
+#Requires ancestor info from this line down
+#check if yEvo mode or an ANC argument was given; if so, continue with ancestor filtering
+if [ "${USE_MASTER_VCFS}" = true ] || [ -n "${ANC}" ]; then
+        cd ${WORKDIR}/${SAMPLE}
 
-        # Unzips lofreq vcfs
-        bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
-        bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
-        bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
+        # ------------------------------------------------------------------
+        # LoFreq variant calling
+        # --yevo mode: run LoFreq in single-sample mode then filter against
+        #              the prebuilt master lofreq ancestor VCF
+        # Standard mode: run LoFreq somatic with the per-experiment ancestor BAM
+        # ------------------------------------------------------------------
+        if [ "${USE_MASTER_VCFS}" = true ]; then
+            (>&2 echo "***LoFreq - Single-sample mode (yEvo: will filter against master ancestor VCF)***")
+            # Call variants on the sample alone; no ancestor BAM available
+            lofreq call-parallel --pp-threads $NSLOTS \
+                -f ${REF} \
+                --call-indels \
+                -o ${SAMPLE}_lofreq_tumor_relaxed.vcf \
+                ${SAMPLE}_R1R2_MD.sort.bam
+
+            # Decompress not needed since lofreq call outputs plain VCF, but
+            # guard against .gz output just in case
+            if [ -f "${SAMPLE}_lofreq_tumor_relaxed.vcf.gz" ]; then
+                bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
+            fi
+        else
+            (>&2 echo ***LoFreq - Somatic***)
+            lofreq somatic -n ${ANCBAM} -t ${WORKDIR}/${SAMPLE}/${SAMPLE}_R1R2_MD.sort.bam -f ${REF} \
+            -o ${SAMPLE}_lofreq_
+
+            # Unzips lofreq vcfs
+            bgzip -d ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz
+            bgzip -d ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz
+            bgzip -d ${SAMPLE}_lofreq_normal_relaxed.vcf.gz
+        fi
+
+        # ------------------------------------------------------------------
+        # Ancestor filtering with bedtools intersect
+        # --yevo mode:    use master ancestor VCFs
+        # Standard mode:  use per-experiment ancestor VCFs
+        # ------------------------------------------------------------------
+
+        # Set ancestor VCF variables based on run mode
+        if [ "${USE_MASTER_VCFS}" = true ]; then
+            ANC_GATK_VCF=${MASTER_GATK_VCF}
+            ANC_FREEBAYES_VCF=${MASTER_FREEBAYES_VCF}
+            ANC_LOFREQ_VCF=${MASTER_LOFREQ_VCF}
+        else
+            ANC_GATK_VCF=${VCFDIR}/${ANC}_gatk_haplo.vcf
+            ANC_FREEBAYES_VCF=${VCFDIR}/${ANC}_freebayes_BCBio.vcf
+            # In standard mode, lofreq ancestor filtering uses the normal_relaxed VCF
+            # produced by lofreq somatic (same logic as original script)
+            ANC_LOFREQ_VCF=${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf
+        fi
 
         # Filters gatk_haplo by ancestor
         #the ancestor files used here are NOT quality filtered
@@ -171,19 +248,19 @@ check if ANC argument was given. If there is, then continue with Ancestor filter
         (>&2 echo ***Bedtools - Intersect***)
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo.vcf \
-                -b ${VCFDIR}/${ANC}_gatk_haplo.vcf \
+                -b ${ANC_GATK_VCF} \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
 
         # Filters freebayes by ancestor 
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio.vcf \
-                -b ${VCFDIR}/${ANC}_freebayes_BCBio.vcf \
+                -b ${ANC_FREEBAYES_VCF} \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
 
-        #Filters lofreq by ancestor
+        # Filters lofreq by ancestor
         bedtools intersect -v -header \
                 -a ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_tumor_relaxed.vcf \
-                -b ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_normal_relaxed.vcf \
+                -b ${ANC_LOFREQ_VCF} \
                 > ${WORKDIR}/${SAMPLE}/${SAMPLE}_lofreq_AncFiltered_temp.vcf
 
         # Normalize indel representations so all callers use the same left-aligned, minimal anchor form
@@ -248,44 +325,41 @@ check if ANC argument was given. If there is, then continue with Ancestor filter
         mkdir -p ${DIR}/final-results-all
         cp ${SAMPLE}_highConfidenceVars.bed ${DIR}/final-results-all/
 
-        # remove all the lofreq intermediate files
-        rm ${SAMPLE}_lofreq_normal_relaxed.log
-        rm ${SAMPLE}_lofreq_normal_relaxed.vcf
-        rm ${SAMPLE}_lofreq_normal_relaxed.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz
-        rm ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz
-        rm ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz
-        rm ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf
-        rm ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz
-        rm ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz
-        rm ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_tumor_relaxed.log
-        rm ${SAMPLE}_lofreq_tumor_relaxed.vcf
-        rm ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz
-        rm ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz.tbi
-        rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz
-        rm ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz.tbi
-        rm ${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
-        rm ${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
-        rm ${SAMPLE}_lofreq_AncFiltered_temp.vcf
+        # ------------------------------------------------------------------
+        # Cleanup: remove intermediate LoFreq files
+        # Standard mode produces more intermediate files than yEvo mode
+        # ------------------------------------------------------------------
+        if [ "${USE_MASTER_VCFS}" = false ]; then
+            rm -f ${SAMPLE}_lofreq_normal_relaxed.log
+            rm -f ${SAMPLE}_lofreq_normal_relaxed.vcf
+            rm -f ${SAMPLE}_lofreq_normal_relaxed.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz
+            rm -f ${SAMPLE}_lofreq_normal_stringent.indels.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz
+            rm -f ${SAMPLE}_lofreq_normal_stringent.snvs.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz
+            rm -f ${SAMPLE}_lofreq_somatic_final.indels.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_somatic_final.snvs.vcf
+            rm -f ${SAMPLE}_lofreq_somatic_final.snvs.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz
+            rm -f ${SAMPLE}_lofreq_somatic_raw.indels.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz
+            rm -f ${SAMPLE}_lofreq_somatic_raw.snvs.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_tumor_relaxed.log
+            rm -f ${SAMPLE}_lofreq_tumor_relaxed.vcf
+            rm -f ${SAMPLE}_lofreq_tumor_relaxed.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz
+            rm -f ${SAMPLE}_lofreq_tumor_stringent.indels.vcf.gz.tbi
+            rm -f ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz
+            rm -f ${SAMPLE}_lofreq_tumor_stringent.snvs.vcf.gz.tbi
+        else
+            # In yEvo mode only the single-sample tumor_relaxed.vcf was produced
+            rm -f ${SAMPLE}_lofreq_tumor_relaxed.vcf
+        fi
 
-else 
-# use a quality and read depth filter on the ancestor vcfs
+        # Shared temp file cleanup (both modes)
+        rm -f ${SAMPLE}_gatk_haplo_AncFiltered_temp.vcf
+        rm -f ${SAMPLE}_freebayes_BCBio_AncFiltered_temp.vcf
+        rm -f ${SAMPLE}_lofreq_AncFiltered_temp.vcf
 
-(>&2 echo ***BCFtools - Filter***)
-bcftools filter -O v -o ${SAMPLE}_gatk_haplo_quality_filter.vcf \
-        -i 'MQ>30 & QUAL>75 & (INFO/DP)>10 & (INFO/SOR)<6' \
-        ${SAMPLE}_gatk_haplo.vcf
-
-bcftools filter -O v -o ${SAMPLE}_freebayes_BCBio_quality_filter.vcf \
-        -i 'QUAL>20 && INFO/DP>10 && INFO/AO>2' \
-        ${SAMPLE}_freebayes_BCBio.vcf
-
-(>&2 echo ***Ancestor Quality Filter completed***)
 fi
