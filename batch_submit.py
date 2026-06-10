@@ -61,8 +61,8 @@ def multi_qsub(script_name, directory, ancestor_name):
     # directory should be the path to your fastq directory
     samples = get_sample_names(directory)
     
-    # check if the ancestor name is even in the directory
-    if ancestor_name not in samples:
+    # check if the ancestor name is even in the directory (skip for yEvo mode)
+    if ancestor_name != "--yevo" and ancestor_name not in samples:
         print(ancestor_name, " not found in ", directory, ". Exiting Program...")
         sys.exit(1)
 
@@ -283,14 +283,13 @@ def main():
             multi_qsub(script_name, fastq_dir, "--yevo")
         else:
             ancestor_name = input("What is the name of the ancestor? : ")
-        # check if ancestor directory even exists in WorkDirectory
-
-        if os.path.isdir(DIR_option[4:] + "/WorkDirectory"):
-            multi_qsub(script_name, fastq_dir, ancestor_name)
-        else:
-            # Ancestor directory does not exist in WorkDirectory, prompt user to "qsub align.sh ancestor" first before batch submitting
-            print(f"{ancestor_name} not found in {DIR_option[4:]}/WorkDirectory, cannot batch submit samples without relevant ancestor files \n")
-            print(f"Align the ancestor files first with the command 'qsub align.sh {ancestor_name}' then use batch submit python script after that job is completed")
+            # check if ancestor directory even exists in WorkDirectory
+            if os.path.isdir(DIR_option[4:] + "/WorkDirectory"):
+                multi_qsub(script_name, fastq_dir, ancestor_name)
+            else:
+                # Ancestor directory does not exist in WorkDirectory, prompt user to "qsub align.sh ancestor" first before batch submitting
+                print(f"{ancestor_name} not found in {DIR_option[4:]}/WorkDirectory, cannot batch submit samples without relevant ancestor files \n")
+                print(f"Align the ancestor files first with the command 'qsub align.sh {ancestor_name}' then use batch submit python script after that job is completed")
 
     else: 
         print("No qsub has been selected. Script completed successfully.")
