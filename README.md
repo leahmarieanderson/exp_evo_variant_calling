@@ -42,6 +42,10 @@ Now your directory tree should something like this:
         ├── README.md
         ├── stringent_filter.py
         ├──  ...
+        ├──  yEvo_allcolor_ancestor
+            └── master_ancestor_freebayes_BCBio.vcf
+            └── master_ancestor_gatk_haplo.vcf
+            └── master_ancestor_lofreq.vcf
         └── genomes
            └── sacCer3.fasta
            └── sacCer3.dict
@@ -55,8 +59,142 @@ Now your directory tree should something like this:
         └── sample2_R2_001.fastq.gz
 
 ```
+
+## Alignment Script Setup
+Now we want to change the our alignment script to match our unique personal directory. The bash settings of the script upon initial installation will likely not be applicable for your directory. 
+
+First, go into the `exp_evo_variant_calling` directory so we can access our scripts.
+```
+cd exp_evo_variant_calling
+```
+
+Next, run the `batch_submit.py` and follow the steps below. 
+
+```
+python3 batch_submit.py
+```
+
+It will then prompt you to modify the current bash settings to bash settings that would fit your local path.
+
+```
+Current Bash Settings for scripts:
+#$ -S /bin/bash
+
+#$ -wd /net/dunham/vol2/Leah/yEvo_echinocandins/yEvo_sequencing_260416
+
+#$ -o /net/dunham/vol2/Leah/yEvo_echinocandins/yEvo_sequencing_260416/outputs/
+
+#$ -e /net/dunham/vol2/Leah/yEvo_echinocandins/yEvo_sequencing_260416/errors/
+
+#$ -l mfree=8G
+
+#$ -l h_rt=36:0:0
+
+
+**NEW** Bash Settings for scripts:
+#$ -S /bin/bash
+
+#$ -wd /net/dunham/vol2/user/experiment1
+
+#$ -o /net/dunham/vol2/user/experiment1/outputs/
+
+#$ -e /net/dunham/vol2/user/experiment1/errors/
+
+#$ -l mfree=8G
+
+#$ -l h_rt=36:0:0
+
+Change your SGE Directives to fit your directories? (y/n) : 
+```
+
+Enter `y` to continue
+
+```
+Current Script Variables:
+FOLDER=fastq
+DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/yEvo_sequencing_260416
+SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
+SEQID=april2026seq # Project name and date for bam header
+REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
+What would you like your SEQID to be? (this could be your project name): 
+```
+
+Here, you just enter the project name of your experiment, this is purely for the bam header. Every variable will be updated at the end of running the script. 
+
+```
+Current Variables Settings for scripts:
+FOLDER=fastq
+DIR=/net/dunham/vol2/Leah/yEvo_echinocandins/yEvo_sequencing_260416
+SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
+SEQID=april2026seq # Project name and date for bam header
+REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
+
+**NEW** Variables Settings for scripts:
+FOLDER=fastq
+DIR=/net/dunham/vol2/user/experiment1
+SEQID=test # Project name and date for bam header
+REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
+SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
+Change your variable paths to fit your directories? (y/n) 
+```
+
+Double check if the `FOLDER` and `DIR` variable are valid file paths for your experiment and that the `FOLDER` variable is the name of the directory which contains the fastqs that you want to call variants on. If they aren't, you can just manually change them in the script later. Enter `y` to continue.
+
+```
+Script 'align.sh' updated.
+Would you like to qsub all samples in /net/dunham/vol2/user/experiment1/fastq/ ? (y/n) : 
+```
+Enter `n` here as we are just trying to set up your bash settings and script variables.
+
 ## Usage
-We have two main steps in our pipeline:
+We have two ways to run our pipeline depending on the type of your experiment:
+
+### Yeast Evolution experiment (yEvo)
+yEvo experiments will typically use one of the following ancestors for their experiment:
+
+* YMD4612_Pink_Ancestor_S46
+* YMD4613_Purple_Ancestor_S47
+* YMD4614_Blue_Ancestor_S48
+* YMD4615_Yellow_Ancestor_S49
+* YMD4616_Black_Ancestor_S50
+* YMD4617_Gray_Ancestor_S51
+* YMD4618_Orange_Ancestor_S52
+* YMD4619_White_Ancestor_S53
+
+Rather than having to run the pipeline on each of these ancestors for your corresponding sample, the `yEvo_allcolor_ancestor` directory contains a combination of variants from all 8 color ancestors for each variant caller. 
+
+For example, `master_ancestor_freebayes_BCBio.vcf` is the combination of all unique variants found in all 8 of the color ancestors using the freebayes variant caller. The `master_ancestor_gatk_haplo.vcf` is the combination of all unique variants found in all 8 of the color ancestors using the gatk haplo variant caller. Lastly, the `master_ancestor_lofreq.vcf` is the combination of all unique variants found in all 8 of the color ancestors using the lofreq variant caller. 
+
+You can either run the pipeline on one sample or do a batch submit on all the samples in a given directory (this directory needs to contain the fastq files of your samples and nothing else)
+
+### Single Sample Job Submission
+For yEvo jobs, you would use this command:
+
+*Note: do not include the whole fastq file name, just the prefix. For example: if your forward read file is "MD4406_S2_R1_001.fastq.gz", then your sample name is "MD4406_S2".*
+
+```
+qsub align_script.sh <SAMPLE> --yevo
+```
+
+### Batch Job Submission
+To submit multiple yEvo jobs, we will utilize the `batch_submit.py` script.
+Run the following command:
+```
+python3 batch_submit.py
+```
+Go through the steps like how you did in the Alignment Script Setup section and on the last question, enter `y`.
+```
+Would you like to qsub all samples in /net/dunham/vol2/user/experiment1/fastq/ ? (y/n) : y
+```
+Then you will be prompted if this is a yevo experiment, enter `y`.
+```
+Is this a yevo experiment? (y/n) : y
+```
+And you should see an output of multiple job submissions being qsubbed. 
+
+## Non-yEvo experiments
+For non-yevo experiments, the workflow looks like this. 
+
 1. Align the ancestor strain and process its bam and vcf files.
 2. Align the evolved strain's variants, apply filters based on the results from aligning ancestor strain and put the results into comprehensive output files 
 
@@ -67,81 +205,8 @@ Start by going into the exp_evo_variant_calling directory that you have cloned o
 ```php
 cd path/to/exp_evo_variant_calling
 ```
-Here, we will need to change some of the working directories in the align script. We can do this by using the `batch_submit.py` script:
 
-```php
-$ python3 batch_submit.py
-```
-Next you will see this popup:
-
-```
-Current Bash Settings for scripts:
-#$ -S /bin/bash
-
-#$ -wd /net/dunham/vol2/Zilong/updating_pipeline_2024
-
-#$ -o /net/dunham/vol2/Zilong/updating_pipeline_2024/outputs/
-
-#$ -e /net/dunham/vol2/Zilong/updating_pipeline_2024/errors/
-
-#$ -l mfree=8G
-
-#$ -l h_rt=36:0:0
-
-
-**NEW** Bash Settings for scripts:
-#$ -S /bin/bash
-
-#$ -wd /net/dunham/vol2/Leah/labmeeting_250613
-
-#$ -o /net/dunham/vol2/Leah/labmeeting_250613/outputs/
-
-#$ -e /net/dunham/vol2/Leah/labmeeting_250613/errors/
-
-#$ -l mfree=8G
-
-#$ -l h_rt=36:0:0
-
-Change your SGE Directives to fit your directories? (y/n) :
-```
-Then this:
-```
-Current Script Variables:
-FOLDER=fastq
-DIR=/net/dunham/vol2/Leah/yEvo_sequencing250520
-SEQID=delmont # Project name and date for bam header
-REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
-SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-What would you like your SEQID to be? (this could be your project name):
-```
-Here, you will enter the name of your project, then press enter.
-Next, you will see a prompt that looks something like this:
-
-```
-Current Variables Settings for scripts:
-FOLDER=fastq
-DIR=/net/dunham/vol2/Zilong/updating_pipeline_2024
-SEQID=test # Project name and date for bam header
-REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
-SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-
-**NEW** Variables Settings for scripts:
-FOLDER=fastq
-DIR=/net/dunham/vol2/Leah/yEvo_sequencing250520
-SEQID=test # Project name and date for bam header
-REF=${DIR}/exp_evo_variant_calling/genomes/sacCer3.fasta # Reference genome
-SCRIPTS=${DIR}/exp_evo_variant_calling # Path of annotation_final.py directory
-Change your variable paths to fit your directories? (y/n) :
-```
-If you enter "y", then this code will rewrite the file paths in `align.sh` to match the directory you are currently working in. If you don't want the file paths to change, then enter "n".
-
-Next, the program will ask if you want to run `align.sh` on all samples in the provided directory:
-
-```
-Script 'align.sh' updated.
-Would you like to qsub all samples in /net/dunham/vol2/Leah/yEvo_sequencing250520/fastq/ ? (y/n) :
-```
-#### *IMPORTANT*: If you have not yet run `align.sh` on your ancestor, you should enter "n" before proceeding. 
+#### *IMPORTANT*: make sure that you have your ancestor fastqs in the same directory as what you put for the FOLDER variable in the align.sh script
 
 Next, align your ancestor by submitting a job to the cluster with `qsub`:
 
@@ -163,6 +228,7 @@ After the job has finished running, you should have a new directory called `Work
     ├── fastq
     ├── genomes
     ├── outputs
+    ├──  yEvo_allcolor_ancestor
     └── WorkDirectory
         └── my_ancestor_strain
             ├── dup_metrics
@@ -279,16 +345,11 @@ In this example, the ancestor is `anc_AB` and the sample that was submitted for 
 By opening the `final_stringent_compiled.txt` file in a program like Microsoft Excel, you can sort the called variants by quality score and/or number of occurrences across the different variant callers.
 
 ### IGV App BED File Tutorial
-To do the BED file variant navigation on IGV, you'll need to follow the steps exactly as listed below as making misclick will cause the app to not read the BED file properly and not give functionality to keyboard shortcuts.
+Now we want to view our results in IGV to verify our variants. We will be making use of the output bed files from our pipeline. 
 
 1. Open IGV and on the top left corner tab, select "S. cerevisiae (sacCer3)" as the genome
-2. Upload your `.bed` files as well as the associated `.bam` and `.bam.bai` files.
-3. After this, drag and zoom using the chromosome view on the top section of the app. Zoom into a position where there is a variant listed on your bed file. Keep zooming until you are fully zoomed into the variant. 
-4. On the sidebar that lists all the files loaded, double click the BED tab that you want to navigate.
-5. press `f` to go forward and `b` to go backwards. This will sequencially jump to the next variant. Unfortunately you cannot jump to variants based on the `QUAL` value, only sequentially (CHRI -> CHRII -> CHRIII ... etc).
-
-*If the `f` and `b` buttons do not work, you will need to reload IGV and try again as you may have misclicked somewhere in between the steps.*
-
-Below is a gif of the process.
-![IGV_bed_tutorial](https://github.com/user-attachments/assets/e1dfda07-fdf8-4fc1-9676-3f9033ead4bf)
+2. Upload your `.bam` and `.bam.bai` files that you want to verify.
+3. After this, go to the regions tab on the top and select "import regions". You'll want to import the `all_variants.bed` file.
+4. After this, click back onto the regions tab at the top and select "region navigator". This will show you all your variants from your imported bed file.
+5. Finally, just go through each variant by clicking on each line, and clicking on "view" to see the region in IGV. You can also choose to remove a particular variant if doesn't seem to be high quality by clicking on "remove". Afterwards, you can click back on the regions tab on the top, and export regions to get a bed file of all the variants that you have verified. 
 
